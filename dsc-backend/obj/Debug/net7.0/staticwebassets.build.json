@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "YSUMVaEfmC2l8AeCtz1DN4XzuUzOEoI6y7eazHal8Uw=",
+  "Source": "dsc-backend",
+  "BasePath": "_content/dsc-backend",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
