@@ -25,6 +25,8 @@ public partial class Tournament
 
     public DateTime? CreatedDate { get; set; }
 
+    public int? UserId { get; set; }
+
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     public virtual Level? Level { get; set; }
@@ -36,4 +38,6 @@ public partial class Tournament
     public virtual ICollection<TeamTournament> TeamTournaments { get; set; } = new List<TeamTournament>();
 
     public virtual ICollection<Team> Teams { get; set; } = new List<Team>();
+
+    public virtual User? User { get; set; }
 }

@@ -37,7 +37,7 @@ namespace dsc_backend.Controllers
                 {
                     var hashPass = _hashpass.MD5Hash(user.Password);
                     var existingAcount = await _db.Users.FirstOrDefaultAsync(y => y.Email == user.Email && y.Password == hashPass);
-                    if (existingAcount != null && existingAcount.Role != null)
+                    if (existingAcount != null)
                     {
                         var InforLogin = new
                         {

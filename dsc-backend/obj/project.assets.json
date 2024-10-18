@@ -3416,11 +3416,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "E:\\dsc-backend\\dsc-backend\\dsc-backend.csproj",
+      "projectUniqueName": "D:\\dsc_backend\\dsc-backend\\dsc-backend.csproj",
       "projectName": "dsc-backend",
-      "projectPath": "E:\\dsc-backend\\dsc-backend\\dsc-backend.csproj",
+      "projectPath": "D:\\dsc_backend\\dsc-backend\\dsc-backend.csproj",
       "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-      "outputPath": "E:\\dsc-backend\\dsc-backend\\obj\\",
+      "outputPath": "D:\\dsc_backend\\dsc-backend\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",

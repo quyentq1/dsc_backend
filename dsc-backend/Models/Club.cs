@@ -9,11 +9,7 @@ public partial class Club
 
     public int? SportId { get; set; }
 
-    public int? UserId { get; set; }
-
     public int? LevelId { get; set; }
-
-    public int? MemberId { get; set; }
 
     public string? ClubName { get; set; }
 
@@ -28,8 +24,6 @@ public partial class Club
     public virtual ICollection<MemberClub> MemberClubs { get; set; } = new List<MemberClub>();
 
     public virtual Sport? Sport { get; set; }
-
-    public virtual User? User { get; set; }
 
     public virtual ICollection<UserClub> UserClubs { get; set; } = new List<UserClub>();
 }
