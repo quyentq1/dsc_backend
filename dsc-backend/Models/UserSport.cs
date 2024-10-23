@@ -15,6 +15,8 @@ public partial class UserSport
 
     public string? Achievement { get; set; }
 
+    public string? Position { get; set; }
+
     public virtual Level? Level { get; set; }
 
     public virtual Sport? Sport { get; set; }

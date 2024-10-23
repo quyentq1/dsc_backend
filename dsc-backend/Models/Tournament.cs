@@ -29,9 +29,13 @@ public partial class Tournament
 
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
+    public virtual ICollection<Fee> Fees { get; set; } = new List<Fee>();
+
     public virtual Level? Level { get; set; }
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public virtual ICollection<Round> Rounds { get; set; } = new List<Round>();
 

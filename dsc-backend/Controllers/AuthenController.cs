@@ -53,7 +53,7 @@ namespace dsc_backend.Controllers
                         var InforLogin = new
                         {
                             Success = false,
-                            Message = "Wrong Email or Password !"
+                            Message = "Sai Tài Khoản Hoặc Mật Khẩu !"
                         };
                         return BadRequest(InforLogin);
                     }
@@ -73,7 +73,7 @@ namespace dsc_backend.Controllers
                 var InforLogin = new
                 {
                     Success = false,
-                    Message = "Not found User !"
+                    Message = "Không Tồn Tại User !"
                 };
                 return BadRequest(InforLogin);
             }
@@ -126,6 +126,7 @@ namespace dsc_backend.Controllers
                 var registerSuccess = new
                 {
                     Success = true,
+                    UserID = newUser.UserId,
                     Email = newUser.Email,
                     Roleid = newUser.RoleId
                 };
@@ -134,7 +135,7 @@ namespace dsc_backend.Controllers
             var registerFailed = new
             {
                 Success = false,
-                Message = "Email user was exist on websites !"
+                Message = "Tài Khoản Email Không tồn tại trên website !"
             };
             return BadRequest(registerFailed);
         }
