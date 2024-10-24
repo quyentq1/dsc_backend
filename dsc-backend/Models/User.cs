@@ -13,7 +13,7 @@ public partial class User
 
     public string Email { get; set; } = null!;
 
-    public string? Password { get; set; }
+    public string Password { get; set; }
 
     public string? FullName { get; set; }
 
@@ -42,6 +42,8 @@ public partial class User
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
+    public virtual ICollection<RequestJoinClub> RequestJoinClubs { get; set; } = new List<RequestJoinClub>();
 
     public virtual Role? Role { get; set; }
 
