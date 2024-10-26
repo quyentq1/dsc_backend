@@ -23,9 +23,9 @@ public partial class Club
 
     public virtual Level? Level { get; set; }
 
-    public virtual ICollection<MemberClub> MemberClubs { get; set; } = new List<MemberClub>();
-
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
+    public virtual ICollection<RequestJoinActivity> RequestJoinActivities { get; set; } = new List<RequestJoinActivity>();
 
     public virtual ICollection<RequestJoinClub> RequestJoinClubs { get; set; } = new List<RequestJoinClub>();
 

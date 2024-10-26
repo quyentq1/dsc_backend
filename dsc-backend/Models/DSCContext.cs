@@ -29,11 +29,11 @@ public partial class DscContext : DbContext
 
     public virtual DbSet<Match> Matches { get; set; }
 
-    public virtual DbSet<MemberClub> MemberClubs { get; set; }
-
     public virtual DbSet<Notification> Notifications { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
+
+    public virtual DbSet<RequestJoinActivity> RequestJoinActivities { get; set; }
 
     public virtual DbSet<RequestJoinClub> RequestJoinClubs { get; set; }
 
@@ -206,25 +206,6 @@ public partial class DscContext : DbContext
                 .HasConstraintName("FK_Match_Team2");
         });
 
-        modelBuilder.Entity<MemberClub>(entity =>
-        {
-            entity.HasKey(e => new { e.MemberId, e.ClubId }).HasName("PK__MemberCl__61C54EB4F7B42FB4");
-
-            entity.Property(e => e.MemberId).HasColumnName("MemberID");
-            entity.Property(e => e.ClubId).HasColumnName("ClubID");
-            entity.Property(e => e.JoinDate).HasColumnType("datetime");
-            entity.Property(e => e.UserId).HasColumnName("UserID");
-
-            entity.HasOne(d => d.Club).WithMany(p => p.MemberClubs)
-                .HasForeignKey(d => d.ClubId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MemberClubs_Club");
-
-            entity.HasOne(d => d.User).WithMany(p => p.MemberClubs)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK_MemberClubs_User");
-        });
-
         modelBuilder.Entity<Notification>(entity =>
         {
             entity.HasKey(e => e.NotificationId).HasName("PK__Notifica__20CF2E327E71AAF7");
@@ -273,6 +254,37 @@ public partial class DscContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_Payment_User");
+        });
+
+        modelBuilder.Entity<RequestJoinActivity>(entity =>
+        {
+            entity.HasKey(e => e.RequestJoinActivityId).HasName("PK__requestJ__7ABA807479079D92");
+
+            entity.ToTable("requestJoinActivity");
+
+            entity.Property(e => e.RequestJoinActivityId).HasColumnName("requestJoinActivityID");
+            entity.Property(e => e.ActivitiesId).HasColumnName("ActivitiesID");
+            entity.Property(e => e.ClubId).HasColumnName("ClubID");
+            entity.Property(e => e.CreateDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+
+            entity.HasOne(d => d.Activities).WithMany(p => p.RequestJoinActivities)
+                .HasForeignKey(d => d.ActivitiesId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_requestJoinActivity_Activity");
+
+            entity.HasOne(d => d.Club).WithMany(p => p.RequestJoinActivities)
+                .HasForeignKey(d => d.ClubId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_requestJoinActivity_Club");
+
+            entity.HasOne(d => d.User).WithMany(p => p.RequestJoinActivities)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_requestJoinActivity_User");
         });
 
         modelBuilder.Entity<RequestJoinClub>(entity =>
@@ -496,13 +508,15 @@ public partial class DscContext : DbContext
 
         modelBuilder.Entity<UserClub>(entity =>
         {
-            entity.HasKey(e => e.UserClubId).HasName("PK__UserClub__9BFD3C25FCB38292");
+            entity.HasKey(e => e.UserClubId).HasName("PK__UserClub__9BFD3C25DE386A9E");
 
             entity.ToTable("UserClub");
 
             entity.Property(e => e.UserClubId).HasColumnName("UserClubID");
             entity.Property(e => e.ClubId).HasColumnName("ClubID");
+            entity.Property(e => e.JoinDate).HasColumnType("datetime");
             entity.Property(e => e.Role).HasMaxLength(50);
+            entity.Property(e => e.Status).HasDefaultValueSql("((1))");
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
             entity.HasOne(d => d.Club).WithMany(p => p.UserClubs)

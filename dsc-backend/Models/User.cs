@@ -11,7 +11,7 @@ public partial class User
 
     public int? UserTeamId { get; set; }
 
-    public string Email { get; set; } = null!;
+    public string Email { get; set; }
 
     public string Password { get; set; }
 
@@ -37,11 +37,11 @@ public partial class User
 
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
-    public virtual ICollection<MemberClub> MemberClubs { get; set; } = new List<MemberClub>();
-
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
+    public virtual ICollection<RequestJoinActivity> RequestJoinActivities { get; set; } = new List<RequestJoinActivity>();
 
     public virtual ICollection<RequestJoinClub> RequestJoinClubs { get; set; } = new List<RequestJoinClub>();
 

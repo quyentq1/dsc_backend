@@ -29,6 +29,8 @@ public partial class Activity
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
+    public virtual ICollection<RequestJoinActivity> RequestJoinActivities { get; set; } = new List<RequestJoinActivity>();
+
     public virtual ICollection<ResultOfActivity> ResultOfActivities { get; set; } = new List<ResultOfActivity>();
 
     public virtual User? User { get; set; }

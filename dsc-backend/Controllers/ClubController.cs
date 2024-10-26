@@ -191,7 +191,6 @@ namespace dsc_backend.Controllers
                 var club = await _db.Clubs
                     .Include(c => c.Level)
                     .Include(c => c.Sport)
-                    .Include(c => c.MemberClubs)
                     .Include(c => c.Payments)
                     .Include(c => c.RequestJoinClubs)
                     .Include(c => c.TransferHistoryReceiverClubs)

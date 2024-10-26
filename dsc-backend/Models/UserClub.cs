@@ -13,6 +13,10 @@ public partial class UserClub
 
     public string? Role { get; set; }
 
+    public DateTime? JoinDate { get; set; }
+
+    public int? Status { get; set; }
+
     public virtual Club? Club { get; set; }
 
     public virtual User? User { get; set; }

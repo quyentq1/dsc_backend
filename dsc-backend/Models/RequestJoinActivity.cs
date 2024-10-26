@@ -3,17 +3,21 @@ using System.Collections.Generic;
 
 namespace dsc_backend.Models;
 
-public partial class RequestJoinClub
+public partial class RequestJoinActivity
 {
-    public int RequestClubId { get; set; }
+    public int RequestJoinActivityId { get; set; }
 
     public int UserId { get; set; }
 
     public int ClubId { get; set; }
 
+    public int ActivitiesId { get; set; }
+
     public string? Status { get; set; }
 
-    public DateTime? Createdate { get; set; }
+    public DateTime? CreateDate { get; set; }
+
+    public virtual Activity Activities { get; set; }
 
     public virtual Club Club { get; set; }
 

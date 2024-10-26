@@ -45,5 +45,27 @@ namespace dsc_backend.Controllers
 
             return Ok(tournaments);
         }
+        [HttpGet("getTournamentDetails")]
+        public async Task<IActionResult> getTournamentDetails([FromBody] Tournament tournament)
+        {
+            var tournaments = await _db.Tournaments
+                .Include(t => t.Level) // Thông tin về Level
+                .Include(t => t.Comments) // Thông tin về Comments
+                .Include(t => t.Fees) // Thông tin về Fees
+                .Include(t => t.Notifications) // Thông tin về Notifications
+                .Include(t => t.Payments) // Thông tin về Payments
+                .Include(t => t.Rounds) // Thông tin về Rounds
+                .Include(t => t.TeamTournaments) // Thông tin về TeamTournaments
+                .Include(t => t.Teams) // Thông tin về Teams
+                .Include(t => t.User) // Thông tin về User
+                .FirstOrDefaultAsync(c => c.TournamentId == tournament.TournamentId);
+
+            if (tournaments == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(tournaments);
+        }
     }
 }
