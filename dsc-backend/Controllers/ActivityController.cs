@@ -91,7 +91,7 @@ namespace dsc_backend.Controllers
         [HttpPost("uppdateActivity")]
         public async Task<IActionResult> uppdateActivity([FromBody] Activity activitys)
         {
-            if (activitys == null)
+            if (activitys != null)
             {
                 var ActivityExist = await _db.Activities.FirstOrDefaultAsync(x => x.ActivityId == activitys.ActivityId);
 
