@@ -46,7 +46,7 @@ namespace dsc_backend.Controllers
         [HttpPost("createActivity")]
         public async Task<IActionResult> createActivity([FromBody] Activity activitys)
         {
-            if (activitys == null)
+            if (activitys != null)
             {
                 var AddActivity = new Activity
                 {
