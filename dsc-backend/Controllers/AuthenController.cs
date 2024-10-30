@@ -119,6 +119,7 @@ namespace dsc_backend.Controllers
                 {
                     Email = user.Email,
                     Password = hashPass,
+                    FullName = user.FullName,
                     RoleId = 2
                 };
                 _db.Users.Add(newUser);
@@ -127,6 +128,7 @@ namespace dsc_backend.Controllers
                 {
                     Success = true,
                     UserID = newUser.UserId,
+                    FullName = user.FullName,
                     Email = newUser.Email,
                     Roleid = newUser.RoleId
                 };
@@ -135,7 +137,7 @@ namespace dsc_backend.Controllers
             var registerFailed = new
             {
                 Success = false,
-                Message = "Tài Khoản Email Không tồn tại trên website !"
+                Message = "Tài Khoản Email đã tồn tại trên website !"
             };
             return BadRequest(registerFailed);
         }

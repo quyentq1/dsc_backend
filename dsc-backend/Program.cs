@@ -24,7 +24,17 @@ builder.Services.AddDbContext<DscContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("SQLServerAuth")
     ));
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder =>
+        {
+            builder
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+});
 // Add services to the container.
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -44,12 +54,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseSwagger();
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseCors();
 app.MapControllers();
 
 app.Run();
