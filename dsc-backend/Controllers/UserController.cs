@@ -116,10 +116,10 @@ namespace dsc_backend.Controllers
                 var InforChangePass = new
                 {
                     Success = false,
-                    Email = existingUser.Email,
-                    Message = "Tài Khoản Không Tồn Tại"
+                    Email = request.Email,
+                    Message = "Mật Khẩu Cũ Không Đúng"
                 };
-                return BadRequest(InforChangePass);
+                return Ok(InforChangePass);
             }
         }
         /*

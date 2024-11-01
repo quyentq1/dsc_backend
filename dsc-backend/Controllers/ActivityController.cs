@@ -28,15 +28,20 @@ namespace dsc_backend.Controllers
         public async Task<IActionResult> getAllActivity()
         {
             var activitys = await _db.Activities
-                .Include(t => t.Level) // Thông tin về Level
-                .Include(t => t.Comments) // Thông tin về Comments
-                .Include(t => t.Notifications) // Thông tin về Notifications
-                .Include(t => t.ResultOfActivities) // Thông tin về ResultOfActivities
-                .Include(t => t.UserActivities) // Thông tin về UserActivities
-                .Include(t => t.User) // Thông tin về User
+                .OrderByDescending(a => a.StartDate)
+                .Select(a => new
+                {
+                    a.ActivityId,
+                    a.ActivityName,
+                    a.StartDate,
+                    a.Location,
+                    a.NumberOfTeams,
+                    // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
+                    LevelName = a.Level.LevelName
+                })
                 .ToListAsync();
 
-            if (activitys == null)
+            if (!activitys.Any())
             {
                 return NotFound();
             }
