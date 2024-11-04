@@ -279,24 +279,89 @@ namespace dsc_backend.Controllers
                 return BadRequest(ListViewRequest);
             }
         }
-        [HttpGet("getActivityDetails")]
-        public async Task<IActionResult> getActivityDetails([FromBody] Activity activities)
+        [HttpGet("getActivityDetails/{activityId}")]
+        public async Task<IActionResult> getActivityDetails(int activityId)
         {
             var activitys = await _db.Activities
-                .Include(t => t.Level) // Thông tin về Level
-                .Include(t => t.Comments) // Thông tin về Comments
-                .Include(t => t.Notifications) // Thông tin về Notifications
-                .Include(t => t.ResultOfActivities) // Thông tin về ResultOfActivities
-                .Include(t => t.UserActivities) // Thông tin về UserActivities
-            .Include(t => t.User) // Thông tin về User
-                .FirstOrDefaultAsync(c => c.ActivityId == activities.ActivityId);
+                .Select(a => new
+                {
+                    a.ActivityId,
+                    a.ActivityName,
+                    a.StartDate,
+                    a.Location,
+                    a.NumberOfTeams,
+                    a.Description,
+                    a.Expense,
+                    // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
+                    LevelName = a.Level.LevelName
+                })
+                .Where(x => x.ActivityId == activityId)
+                .ToListAsync();
 
-            if (activitys == null)
+            if (!activitys.Any())
             {
                 return NotFound();
             }
 
             return Ok(activitys);
+        }
+        [HttpGet("getMemberActivity/{activityId}")]
+        public async Task<IActionResult> getMemberActivity(int activityId)
+        {
+            // Lấy danh sách UserActivities theo ActivityId
+            var userActivities = await _db.UserActivities
+                .Where(ua => ua.ActivityId == activityId)
+                .Include(ua => ua.User) // Kết nối với bảng User
+                .Include(ua => ua.Activity) // Kết nối với bảng Activity
+                .ToListAsync();
+
+            if (!userActivities.Any())
+            {
+                return NotFound("Không tìm thấy thông tin hoạt động hoặc thành viên.");
+            }
+
+            var firstActivity = userActivities.First().Activity;
+            if (firstActivity == null)
+            {
+                return NotFound("Không tìm thấy thông tin hoạt động.");
+            }
+
+            var activity = new
+            {
+                ActivityId = firstActivity.ActivityId,
+                ActivityName = firstActivity.ActivityName,
+                StartDate = firstActivity.StartDate,
+                Location = firstActivity.Location,
+                NumberOfTeams = firstActivity.NumberOfTeams,
+                Description = firstActivity.Description,
+                Expense = firstActivity.Expense,
+                LevelName = firstActivity.Level?.LevelName // Kiểm tra null cho Level
+            };
+
+            // Lấy danh sách UserId từ userActivities
+            var userIds = userActivities.Select(ua => ua.UserId).ToList();
+
+            // Lấy thông tin memberInfo từ UserSport
+            var memberInfo = await _db.UserSports
+                .Where(us => userIds.Contains(us.UserId))
+                .Include(us => us.Level) // Kết nối với Level
+                .ToListAsync(); // Chuyển sang danh sách
+
+            // Tạo danh sách memberInfo với RoleActivity
+            var resultMemberInfo = memberInfo.Select(us => new
+            {
+                FullName = us.User.FullName,
+                RoleActivity = userActivities.FirstOrDefault(ua => ua.UserId == us.UserId)?.RoleInActivity,
+                LevelName = us.Level.LevelName
+            }).ToList();
+
+            var result = new
+            {
+                Activity = activity,
+                MemberInfo = resultMemberInfo
+            };
+
+            return Ok(result);
         }
     }
 }
