@@ -1,4 +1,5 @@
-﻿using dsc_backend.Helper;
+﻿using dsc_backend.DAO;
+using dsc_backend.Helper;
 using dsc_backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +26,10 @@ namespace dsc_backend.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
         [HttpGet("getAllActivity")]
-        public async Task<IActionResult> getAllActivity()
+        public async Task<IActionResult> GetAllActivity([FromQuery] int userId)
         {
-            var activitys = await _db.Activities
+            var activities = await _db.Activities
+                .Where(x => x.UserId != userId)
                 .OrderByDescending(a => a.StartDate)
                 .Select(a => new
                 {
@@ -36,18 +38,42 @@ namespace dsc_backend.Controllers
                     a.StartDate,
                     a.Location,
                     a.NumberOfTeams,
-                    // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
                     LevelName = a.Level.LevelName
                 })
                 .ToListAsync();
 
-            if (!activitys.Any())
+            if (!activities.Any())
             {
                 return NotFound();
             }
 
-            return Ok(activitys);
+            return Ok(activities);
         }
+        [HttpGet("getMyActivity")]
+        public async Task<IActionResult> getMyActivity([FromQuery] int userId)
+        {
+            var activities = await _db.Activities
+                .Where(x=>x.UserId == userId)
+                .OrderByDescending(a => a.StartDate)
+                .Select(a => new
+                {
+                    a.ActivityId,
+                    a.ActivityName,
+                    a.StartDate,
+                    a.Location,
+                    a.NumberOfTeams,
+                    LevelName = a.Level.LevelName
+                })
+                .ToListAsync();
+
+            if (!activities.Any())
+            {
+                return NotFound();
+            }
+
+            return Ok(activities);
+        }
+
         [HttpPost("createActivity")]
         public async Task<IActionResult> createActivity([FromBody] Activity activitys)
         {
