@@ -264,7 +264,6 @@ public partial class DscContext : DbContext
 
             entity.Property(e => e.RequestJoinActivityId).HasColumnName("requestJoinActivityID");
             entity.Property(e => e.ActivitiesId).HasColumnName("ActivitiesID");
-            entity.Property(e => e.ClubId).HasColumnName("ClubID");
             entity.Property(e => e.CreateDate)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
@@ -275,11 +274,6 @@ public partial class DscContext : DbContext
                 .HasForeignKey(d => d.ActivitiesId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_requestJoinActivity_Activity");
-
-            entity.HasOne(d => d.Club).WithMany(p => p.RequestJoinActivities)
-                .HasForeignKey(d => d.ClubId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_requestJoinActivity_Club");
 
             entity.HasOne(d => d.User).WithMany(p => p.RequestJoinActivities)
                 .HasForeignKey(d => d.UserId)

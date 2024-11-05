@@ -29,7 +29,33 @@ namespace dsc_backend.Controllers
         public async Task<IActionResult> GetAllActivity([FromQuery] int userId)
         {
             var activities = await _db.Activities
-                .Where(x => x.UserId != userId)
+                .Where(a => a.UserId != userId &&
+                            !_db.UserActivities.Any(ua => ua.UserId == userId && ua.ActivityId == a.ActivityId)) // Kiểm tra UserActivity
+                .OrderByDescending(a => a.StartDate)
+                .Select(a => new
+                {
+                    a.ActivityId,
+                    a.ActivityName,
+                    a.StartDate,
+                    a.Location,
+                    a.NumberOfTeams,
+                    LevelName = a.Level.LevelName
+                })
+                .ToListAsync();
+
+            if (!activities.Any())
+            {
+                return NotFound();
+            }
+
+            return Ok(activities);
+        }
+
+        [HttpGet("getActivityJoined")]
+        public async Task<IActionResult> getActivityJoined([FromQuery] int userId)
+        {
+            var activities = await _db.Activities
+                .Where(x=>x.UserId == userId)
                 .OrderByDescending(a => a.StartDate)
                 .Select(a => new
                 {
@@ -50,25 +76,26 @@ namespace dsc_backend.Controllers
             return Ok(activities);
         }
         [HttpGet("getMyActivity")]
-        public async Task<IActionResult> getMyActivity([FromQuery] int userId)
+        public async Task<IActionResult> GetMyActivity([FromQuery] int userId)
         {
-            var activities = await _db.Activities
-                .Where(x=>x.UserId == userId)
-                .OrderByDescending(a => a.StartDate)
-                .Select(a => new
+            var activities = await _db.UserActivities
+                .Where(ua => ua.UserId == userId)
+                .Include(ua => ua.Activity)                // Bao gồm bảng Activity
+                    .ThenInclude(a => a.Level)             // Bao gồm bảng Level từ Activity
+                .Select(ua => new
                 {
-                    a.ActivityId,
-                    a.ActivityName,
-                    a.StartDate,
-                    a.Location,
-                    a.NumberOfTeams,
-                    LevelName = a.Level.LevelName
+                    ua.Activity.ActivityId,               // Lấy ActivityId từ bảng Activity
+                    ua.Activity.ActivityName,             // Lấy tên của Activity
+                    ua.Activity.StartDate,                // Lấy StartDate từ Activity
+                    ua.Activity.Location,                 // Lấy Location từ Activity
+                    ua.Activity.NumberOfTeams,            // Lấy NumberOfTeams từ Activity
+                    LevelName = ua.Activity.Level.LevelName // Lấy tên của Level từ Activity
                 })
                 .ToListAsync();
 
             if (!activities.Any())
             {
-                return NotFound();
+                return NotFound("Không tìm thấy hoạt động nào cho người dùng này.");
             }
 
             return Ok(activities);
@@ -175,7 +202,6 @@ namespace dsc_backend.Controllers
                 {
 
                     UserId = requestJoinActivity.UserId,
-                    ClubId = requestJoinActivity.ClubId,
                     ActivitiesId = requestJoinActivity.ActivitiesId,
                     Status = "1",
                     CreateDate = DateTime.Now,
@@ -186,7 +212,6 @@ namespace dsc_backend.Controllers
                 {
                     Success = true,
                     UserId = requestJoinActivity.UserId,
-                    ClubId = requestJoinActivity.ClubId,
                     ActivitiesId = requestJoinActivity.ActivitiesId,
                     Status = "1",
                     Createdate = DateTime.Now,
@@ -205,39 +230,55 @@ namespace dsc_backend.Controllers
                 return BadRequest(ListViewRequest);
             }
         }
-        [HttpPost("getrequestJoinActivity")]
-        public async Task<IActionResult> getrequestJoinActivity([FromBody] RequestJoinActivity requestJoinActivites)
+        [HttpGet("getrequestJoinActivity/{activityId}")]
+        public async Task<IActionResult> GetRequestJoinActivity(int activityId)
         {
-            if (requestJoinActivites != null)
+            if (activityId > 0) // Kiểm tra activityId có giá trị hợp lệ
             {
-                var listjoinactivity = await _db.RequestJoinActivities.Where(x => x.ActivitiesId == requestJoinActivites.ActivitiesId)
-                                       .OrderByDescending(x => x.Status)
-                                       .ToListAsync();
-                var ListViewRequest = new
+                var listJoinActivity = await _db.RequestJoinActivities
+                    .Where(x => x.ActivitiesId == activityId)
+                    .Include(x => x.User) // Bao gồm thông tin từ bảng User
+                    .OrderByDescending(x => x.Status)
+                    .Select(x => new
+                    {
+                        x.RequestJoinActivityId, // Giả định bạn có trường RequestId
+                        x.ActivitiesId,
+                        x.CreateDate,
+                        x.Status,
+                        x.UserId,
+                        UserFullName = x.User.FullName // Lấy FullName từ bảng User
+                    })
+                    .ToListAsync();
+
+                var listViewRequest = new
                 {
                     Success = true,
-                    listjoinactivity,
-
+                    ListJoinActivity = listJoinActivity,
                 };
-                return Ok(ListViewRequest);
+
+                return Ok(listViewRequest);
             }
             else
             {
-                var ListViewRequest = new
+                var listViewRequest = new
                 {
                     Success = false,
                     Message = "Có lỗi trong việc hiển thị đơn tham gia kèo đấu"
                 };
-                return BadRequest(ListViewRequest);
+                return BadRequest(listViewRequest);
             }
         }
+
         [HttpPost("acceptrequestJoinActivity")]
-        public async Task<IActionResult> acceptrequestJoinClub([FromBody] RequestJoinActivity requestJoinActivites)
+        public async Task<IActionResult> acceptrequestJoinActivity([FromBody] RequestJoinActivity requestJoinActivites)
         {
             if (requestJoinActivites != null)
             {
-                var requestjoin = await _db.RequestJoinActivities.Where(x => x.RequestJoinActivityId == requestJoinActivites.RequestJoinActivityId)
-                                       .FirstOrDefaultAsync();
+                var requestjoin = await _db.RequestJoinActivities
+                    .Where(x => x.RequestJoinActivityId == requestJoinActivites.RequestJoinActivityId &&
+                                x.UserId == requestJoinActivites.UserId) // Kiểm tra UserId
+                    .FirstOrDefaultAsync();
+
                 if (requestjoin != null)
                 {
                     // Cập nhật Status
@@ -245,35 +286,58 @@ namespace dsc_backend.Controllers
 
                     // Lưu thay đổi vào cơ sở dữ liệu
                     await _db.SaveChangesAsync();
+
+                    // Tạo một đối tượng Activity mới hoặc cập nhật nếu đã tồn tại
+                    var activityId = requestjoin.ActivitiesId; // Lấy ActivityId từ requestjoin
+                    var userId = requestjoin.UserId; // Lấy UserId từ requestjoin
+
+                    // Kiểm tra xem UserActivities đã tồn tại chưa
+                    var activity = await _db.UserActivities
+                        .Where(a => a.ActivityId == activityId && a.UserId == userId)
+                        .FirstOrDefaultAsync();
+
+                    if (activity == null)
+                    {
+                        activity = new UserActivity
+                        {
+                            ActivityId = activityId,
+                            UserId = userId,
+                            JoinDate= DateTime.UtcNow,
+                            RoleInActivity = "Player"
+                            
+                        };
+
+                        await _db.UserActivities.AddAsync(activity);
+                    }
+                    // Lưu thay đổi vào cơ sở dữ liệu
+                    await _db.SaveChangesAsync();
+
                     var ListViewRequest = new
                     {
                         Success = true,
                         RequestJoin = requestjoin, // Có thể trả về requestjoin nếu cần
                         Message = "Đã xác nhận đơn tham gia kèo đấu thành công"
                     };
+
                     return Ok(ListViewRequest);
                 }
                 else
                 {
-                    return BadRequest();
+                    return BadRequest(new { Success = false, Message = "Không tìm thấy yêu cầu tham gia hoặc UserId không khớp." });
                 }
             }
             else
             {
-                var ListViewRequest = new
-                {
-                    Success = false,
-                    Message = "Có lỗi trong việc xác nhận đơn tham gia kèo đấu"
-                };
-                return BadRequest(ListViewRequest);
+                return BadRequest(new { Success = false, Message = "Có lỗi trong việc xác nhận đơn tham gia kèo đấu." });
             }
         }
+
         [HttpPost("cancelrequestJoinActivity")]
         public async Task<IActionResult> cancelrequestJoinActivity([FromBody] RequestJoinActivity requestJoinActivites)
         {
             if (requestJoinActivites != null)
             {
-                var requestjoin = await _db.RequestJoinActivities.Where(x => x.RequestJoinActivityId == requestJoinActivites.RequestJoinActivityId)
+                var requestjoin = await _db.RequestJoinActivities.Where(x => x.RequestJoinActivityId == requestJoinActivites.RequestJoinActivityId && x.UserId == requestJoinActivites.UserId)
                                        .FirstOrDefaultAsync();
                 if (requestjoin != null)
                 {
