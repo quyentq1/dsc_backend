@@ -4,6 +4,7 @@ using dsc_backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Linq;
 using static System.Reflection.Metadata.BlobBuilder;
 
 namespace dsc_backend.Controllers
@@ -55,7 +56,8 @@ namespace dsc_backend.Controllers
         public async Task<IActionResult> getActivityJoined([FromQuery] int userId)
         {
             var activities = await _db.Activities
-                .Where(x=>x.UserId == userId)
+                .Include(a => a.UserActivities)  // Kết hợp bảng UserActivity
+                .Where(x => x.UserActivities.Any(ua => ua.UserId == userId && ua.RoleInActivity == "Player"))  // Kiểm tra UserId và RoleInActivity
                 .OrderByDescending(a => a.StartDate)
                 .Select(a => new
                 {
@@ -75,6 +77,7 @@ namespace dsc_backend.Controllers
 
             return Ok(activities);
         }
+
         [HttpGet("getMyActivity")]
         public async Task<IActionResult> GetMyActivity([FromQuery] int userId)
         {
@@ -102,22 +105,33 @@ namespace dsc_backend.Controllers
         }
 
         [HttpPost("createActivity")]
-        public async Task<IActionResult> createActivity([FromBody] Activity activitys)
+        public async Task<IActionResult> createActivity([FromBody] CreateActivityDAO activitys)
         {
             if (activitys != null)
             {
+                var level = await _db.Levels.Where(x => x.LevelName == activitys.minSkill).FirstOrDefaultAsync();
                 var AddActivity = new Activity
                 {
-                    UserId = activitys.UserId,
-                    LevelId = activitys.LevelId,
-                    ActivityName = activitys.ActivityName,
-                    StartDate = activitys.StartDate,
-                    Location = activitys.Location,
-                    NumberOfTeams = activitys.NumberOfTeams,
-                    Expense = activitys.Expense,
-                    Description = activitys.Description,
+                    UserId = activitys.userId,
+                    LevelId = level?.LevelId,
+                    Description = activitys.description,
+                    ActivityName = activitys.name,
+                    StartDate = DateTime.Parse(activitys?.datetime),
+                    Location = activitys?.location,
+                    NumberOfTeams = activitys?.playerCount,
+                    Expense = activitys?.amount,
                 };
                 _db.Activities.Add(AddActivity);
+                _db.SaveChanges();
+                var activityId = AddActivity.ActivityId;
+                var ActivityUser = new UserActivity
+                {
+                    UserId = activitys.userId,
+                    ActivityId = activityId,
+                    JoinDate = DateTime.Now,
+                    RoleInActivity = "Admin"
+                };
+                _db.UserActivities.Add(ActivityUser);
                 _db.SaveChanges();
                 var ListViewActivity = new
                 {
