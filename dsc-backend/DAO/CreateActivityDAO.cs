@@ -2,6 +2,7 @@
 {
     public class CreateActivityDAO
     {
+        public int? activityId { get; set; }    
         public string? sport { get; set; }
         public string? eventType { get; set; }
         public string? datetime { get; set; }

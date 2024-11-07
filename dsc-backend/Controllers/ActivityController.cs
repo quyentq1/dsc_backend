@@ -161,23 +161,24 @@ namespace dsc_backend.Controllers
 
         }
         [HttpPost("uppdateActivity")]
-        public async Task<IActionResult> uppdateActivity([FromBody] Activity activitys)
+        public async Task<IActionResult> uppdateActivity([FromBody] CreateActivityDAO activitys)
         {
             if (activitys != null)
             {
-                var ActivityExist = await _db.Activities.FirstOrDefaultAsync(x => x.ActivityId == activitys.ActivityId);
-
+                var ActivityExist = await _db.Activities.FirstOrDefaultAsync(x => x.ActivityId == activitys.activityId && x.UserId == activitys.userId);
+                var level = await _db.Levels.Where(x => x.LevelName == activitys.minSkill).FirstOrDefaultAsync();
                 if (ActivityExist == null)
                 {
                     return NotFound("kèo đấu không tồn tại.");
                 }
-                ActivityExist.ActivityName = activitys.ActivityName ?? ActivityExist.ActivityName;
-                ActivityExist.LevelId = activitys.LevelId ?? ActivityExist.LevelId;
-                ActivityExist.StartDate = activitys.StartDate ?? ActivityExist.StartDate;
-                ActivityExist.Location = activitys.Location ?? ActivityExist.Location;
-                ActivityExist.NumberOfTeams = activitys.NumberOfTeams ?? ActivityExist.NumberOfTeams;
-                ActivityExist.Expense = activitys.Expense ?? ActivityExist.Expense;
-                ActivityExist.Description = activitys.Description ?? ActivityExist.Description;
+                var StartDate = DateTime.Parse(activitys?.datetime);
+                ActivityExist.ActivityName = activitys.name ?? ActivityExist.ActivityName;
+                ActivityExist.LevelId = level?.LevelId ?? ActivityExist.LevelId;
+                ActivityExist.StartDate = (DateTime?)StartDate ?? ActivityExist.StartDate;
+                ActivityExist.Location = activitys.location ?? ActivityExist.Location;
+                ActivityExist.NumberOfTeams = (int?)activitys.playerCount ?? ActivityExist.NumberOfTeams;
+                ActivityExist.Expense = activitys.amount ?? ActivityExist.Expense;
+                ActivityExist.Description = activitys.description ?? ActivityExist.Description;
                 _db.Activities.Update(ActivityExist);
                 await _db.SaveChangesAsync();
                 var updatedactivity = new
