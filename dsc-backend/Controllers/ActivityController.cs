@@ -209,40 +209,50 @@ namespace dsc_backend.Controllers
 
         }
         [HttpPost("requestJoinActivity")]
-        public async Task<IActionResult> requestJoinActivity([FromBody] RequestJoinActivity requestJoinActivity)
+        public async Task<IActionResult> requestJoinActivity([FromBody] CreateActivityDAO requestJoinActivity)
         {
-            if (requestJoinActivity != null)
+            var requestExist = await _db.RequestJoinActivities.Where(x => x.ActivitiesId == requestJoinActivity.activityId && x.UserId == requestJoinActivity.userId).FirstOrDefaultAsync();
+            if(requestExist != null)
             {
-                var joinActivitynew = new RequestJoinActivity
-                {
-
-                    UserId = requestJoinActivity.UserId,
-                    ActivitiesId = requestJoinActivity.ActivitiesId,
-                    Status = "1",
-                    CreateDate = DateTime.Now,
-                };
-                _db.RequestJoinActivities.Add(joinActivitynew);
-                _db.SaveChanges();
                 var ListViewRequest = new
                 {
                     Success = true,
-                    UserId = requestJoinActivity.UserId,
-                    ActivitiesId = requestJoinActivity.ActivitiesId,
-                    Status = "1",
-                    Createdate = DateTime.Now,
-                    Message = "Đã gởi đơn xin tham gia kèo đấu thành công"
+                    Message = "Đã gởi đơn xin tham gia trước đó rồi. Vui lòng chờ duyệt !"
 
                 };
                 return Ok(ListViewRequest);
             }
             else
             {
-                var ListViewRequest = new
+                if (requestJoinActivity != null)
                 {
-                    Success = false,
-                    Message = "Có lỗi trong việc gởi đơn tham gia kèo đấu"
-                };
-                return BadRequest(ListViewRequest);
+                    var joinActivitynew = new RequestJoinActivity
+                    {
+
+                        UserId = requestJoinActivity.userId,
+                        ActivitiesId = requestJoinActivity.activityId,
+                        Status = "1",
+                        CreateDate = DateTime.Now,
+                    };
+                    _db.RequestJoinActivities.Add(joinActivitynew);
+                    _db.SaveChanges();
+                    var ListViewRequest = new
+                    {
+                        Success = true,
+                        Message = "Đã gởi đơn xin tham gia kèo đấu thành công"
+
+                    };
+                    return Ok(ListViewRequest);
+                }
+                else
+                {
+                    var ListViewRequest = new
+                    {
+                        Success = false,
+                        Message = "Có lỗi trong việc gởi đơn tham gia kèo đấu"
+                    };
+                    return BadRequest(ListViewRequest);
+                }
             }
         }
         [HttpGet("getrequestJoinActivity/{activityId}")]

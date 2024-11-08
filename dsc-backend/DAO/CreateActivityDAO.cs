@@ -2,7 +2,7 @@
 {
     public class CreateActivityDAO
     {
-        public int? activityId { get; set; }    
+        public int activityId { get; set; }    
         public string? sport { get; set; }
         public string? eventType { get; set; }
         public string? datetime { get; set; }
@@ -15,7 +15,7 @@
         public string? maxSkill { get; set; }
         public string? name { get; set; }
         public string? description { get; set; }
-        public int? userId { get; set; }
+        public int userId { get; set; }
         public int? amount { get; set;}
 
     }
