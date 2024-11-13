@@ -1,4 +1,6 @@
 ﻿using Azure.Core;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using dsc_backend.DAO;
 using dsc_backend.Helper;
 using dsc_backend.Models;
@@ -54,6 +56,25 @@ namespace dsc_backend.Controllers
             }
             else { return BadRequest(); }
         }
+        private async Task<ImageUploadResult> UploadToCloudinary(IFormFile file)
+        {
+            var account = new Account(
+                "di6k4wpxl",
+                "791189184743261",
+                "xQRBuHQLrCQokqwVU777RrIyLDQ");
+
+            var cloudinary = new Cloudinary(account);
+
+            using (var stream = file.OpenReadStream())
+            {
+                var uploadParams = new ImageUploadParams
+                {
+                    File = new FileDescription(file.FileName, stream)
+                };
+
+                return await cloudinary.UploadAsync(uploadParams);
+            }
+        }
         [HttpPost("updateinfor")]
         public async Task<IActionResult> UpdateInfor([FromBody] User user)
         {
@@ -93,6 +114,57 @@ namespace dsc_backend.Controllers
 
             return Ok(updatedUserInfo);
         }
+        [HttpPost("updateinforimg")]
+        public async Task<IActionResult> UpdateInforImg([FromForm] User user, [FromForm] IFormFile file)
+        {
+            if (string.IsNullOrEmpty(user.Email))
+            {
+                return BadRequest("Tài khoản Email không được trống.");
+            }
+
+            var existingUser = await _db.Users.FirstOrDefaultAsync(x => x.Email == user.Email);
+
+            if (existingUser == null)
+            {
+                return NotFound("Người dùng không tồn tại.");
+            }
+
+            existingUser.FullName = user.FullName ?? existingUser.FullName;
+            existingUser.Address = user.Address ?? existingUser.Address;
+            existingUser.Phone = user.Phone ?? existingUser.Phone;
+            existingUser.Age = user.Age ?? existingUser.Age;
+            existingUser.Weight = user.Weight ?? existingUser.Weight;
+            existingUser.Height = user.Height ?? existingUser.Height; // Cập nhật Height nếu không trống
+
+            if (file != null && file.Length > 0)
+            {
+                var uploadResult = await UploadToCloudinary(file);
+
+                if (uploadResult != null)
+                {
+                    existingUser.Avatar = uploadResult.SecureUrl.ToString();
+                }
+            }
+
+            _db.Users.Update(existingUser);
+            await _db.SaveChangesAsync();
+
+            var updatedUserInfo = new
+            {
+                UserId = existingUser.UserId,
+                FullName = existingUser.FullName,
+                Address = existingUser.Address,
+                Phone = existingUser.Phone,
+                Email = existingUser.Email,
+                Age = existingUser.Age,
+                Weight = existingUser.Weight,
+                Avatar = existingUser.Avatar,
+                Height = existingUser.Height,
+            };
+
+            return Ok(updatedUserInfo);
+        }
+
         [HttpPost("changepassword")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDAO request)
         {
@@ -122,6 +194,7 @@ namespace dsc_backend.Controllers
                 return Ok(InforChangePass);
             }
         }
+        
         /*
         Controller UseCase Viewyoursportslist
         */

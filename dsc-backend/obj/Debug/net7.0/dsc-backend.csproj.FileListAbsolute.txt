@@ -152,3 +152,5 @@ D:\dsc_backend\dsc-backend\obj\Debug\net7.0\refint\dsc-backend.dll
 D:\dsc_backend\dsc-backend\obj\Debug\net7.0\dsc-backend.pdb
 D:\dsc_backend\dsc-backend\obj\Debug\net7.0\dsc-backend.genruntimeconfig.cache
 D:\dsc_backend\dsc-backend\obj\Debug\net7.0\ref\dsc-backend.dll
+D:\dsc_backend\dsc-backend\bin\Debug\net7.0\CloudinaryDotNet.dll
+D:\dsc_backend\dsc-backend\bin\Debug\net7.0\Newtonsoft.Json.dll

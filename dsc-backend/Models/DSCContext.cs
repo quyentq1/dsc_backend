@@ -59,6 +59,8 @@ public partial class DscContext : DbContext
 
     public virtual DbSet<UserActivity> UserActivities { get; set; }
 
+    public virtual DbSet<UserActivityClub> UserActivityClubs { get; set; }
+
     public virtual DbSet<UserClub> UserClubs { get; set; }
 
     public virtual DbSet<UserSport> UserSports { get; set; }
@@ -76,6 +78,7 @@ public partial class DscContext : DbContext
 
             entity.Property(e => e.ActivityId).HasColumnName("ActivityID");
             entity.Property(e => e.ActivityName).HasMaxLength(255);
+            entity.Property(e => e.Avatar).HasMaxLength(255);
             entity.Property(e => e.Expense).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.LevelId).HasColumnName("LevelID");
             entity.Property(e => e.Location).HasMaxLength(255);
@@ -115,6 +118,7 @@ public partial class DscContext : DbContext
             entity.ToTable("Club");
 
             entity.Property(e => e.ClubId).HasColumnName("ClubID");
+            entity.Property(e => e.Avatar).HasMaxLength(255);
             entity.Property(e => e.ClubName).HasMaxLength(255);
             entity.Property(e => e.CreateDate).HasColumnType("datetime");
             entity.Property(e => e.Fund).HasColumnType("decimal(18, 0)");
@@ -364,6 +368,7 @@ public partial class DscContext : DbContext
             entity.ToTable("Sport");
 
             entity.Property(e => e.SportId).HasColumnName("SportID");
+            entity.Property(e => e.Avatar).HasMaxLength(255);
             entity.Property(e => e.SportName).HasMaxLength(100);
         });
 
@@ -407,6 +412,7 @@ public partial class DscContext : DbContext
             entity.HasKey(e => e.TournamentId).HasName("PK__Tourname__AC6313330042E623");
 
             entity.Property(e => e.TournamentId).HasColumnName("TournamentID");
+            entity.Property(e => e.Avatar).HasMaxLength(255);
             entity.Property(e => e.CreatedDate).HasColumnType("datetime");
             entity.Property(e => e.EndDate).HasColumnType("datetime");
             entity.Property(e => e.LevelId).HasColumnName("LevelID");
@@ -498,6 +504,36 @@ public partial class DscContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.UserActivities)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_UserActivities_User");
+        });
+
+        modelBuilder.Entity<UserActivityClub>(entity =>
+        {
+            entity.HasKey(e => e.UserActivityClubId).HasName("PK__UserActi__6CAE09FCBC802542");
+
+            entity.ToTable("UserActivityClub");
+
+            entity.Property(e => e.UserActivityClubId).HasColumnName("UserActivityClubID");
+            entity.Property(e => e.ActivityId).HasColumnName("ActivityID");
+            entity.Property(e => e.ClubId).HasColumnName("ClubID");
+            entity.Property(e => e.JoinDate).HasColumnType("datetime");
+            entity.Property(e => e.Role).HasMaxLength(50);
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+
+            entity.HasOne(d => d.Activity).WithMany(p => p.UserActivityClubs)
+                .HasForeignKey(d => d.ActivityId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserActivityClub_Activity");
+
+            entity.HasOne(d => d.Club).WithMany(p => p.UserActivityClubs)
+                .HasForeignKey(d => d.ClubId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserActivityClub_Club");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserActivityClubs)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserActivityClub_User");
         });
 
         modelBuilder.Entity<UserClub>(entity =>

@@ -27,6 +27,8 @@ public partial class Tournament
 
     public int? UserId { get; set; }
 
+    public string? Avatar { get; set; }
+
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     public virtual ICollection<Fee> Fees { get; set; } = new List<Fee>();

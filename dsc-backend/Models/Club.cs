@@ -21,6 +21,8 @@ public partial class Club
 
     public decimal? Fund { get; set; }
 
+    public string? Avatar { get; set; }
+
     public virtual Level? Level { get; set; }
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
@@ -32,6 +34,8 @@ public partial class Club
     public virtual ICollection<TransferHistory> TransferHistoryReceiverClubs { get; set; } = new List<TransferHistory>();
 
     public virtual ICollection<TransferHistory> TransferHistorySenderClubs { get; set; } = new List<TransferHistory>();
+
+    public virtual ICollection<UserActivityClub> UserActivityClubs { get; set; } = new List<UserActivityClub>();
 
     public virtual ICollection<UserClub> UserClubs { get; set; } = new List<UserClub>();
 }

@@ -9,6 +9,8 @@ public partial class Sport
 
     public string? SportName { get; set; }
 
+    public string? Avatar { get; set; }
+
     public virtual ICollection<Club> Clubs { get; set; } = new List<Club>();
 
     public virtual ICollection<UserSport> UserSports { get; set; } = new List<UserSport>();

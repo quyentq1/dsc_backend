@@ -15,7 +15,7 @@ public partial class RequestJoinClub
 
     public DateTime? Createdate { get; set; }
 
-    public virtual Club Club { get; set; } = null!;
+    public virtual Club? Club { get; set; }
 
-    public virtual User User { get; set; } = null!;
+    public virtual User? User { get; set; } 
 }

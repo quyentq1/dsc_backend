@@ -11,7 +11,7 @@ public partial class User
 
     public int? UserTeamId { get; set; }
 
-    public string Email { get; set; } = null!;
+    public string? Email { get; set; }
 
     public string? Password { get; set; }
 
@@ -50,6 +50,8 @@ public partial class User
     public virtual ICollection<Tournament> Tournaments { get; set; } = new List<Tournament>();
 
     public virtual ICollection<UserActivity> UserActivities { get; set; } = new List<UserActivity>();
+
+    public virtual ICollection<UserActivityClub> UserActivityClubs { get; set; } = new List<UserActivityClub>();
 
     public virtual ICollection<UserClub> UserClubs { get; set; } = new List<UserClub>();
 

@@ -23,6 +23,8 @@ public partial class Activity
 
     public string? Description { get; set; }
 
+    public string? Avatar { get; set; }
+
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     public virtual Level? Level { get; set; }
@@ -36,4 +38,6 @@ public partial class Activity
     public virtual User? User { get; set; }
 
     public virtual ICollection<UserActivity> UserActivities { get; set; } = new List<UserActivity>();
+
+    public virtual ICollection<UserActivityClub> UserActivityClubs { get; set; } = new List<UserActivityClub>();
 }
