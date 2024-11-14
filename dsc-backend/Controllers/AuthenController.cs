@@ -42,9 +42,11 @@ namespace dsc_backend.Controllers
                         var InforLogin = new
                         {
                             Success = true,
+                            UserId = existingAcount.UserId,
                             FullName = existingAcount.FullName,
                             Email = existingAcount.Email,
-                            Roleid = existingAcount.RoleId
+                            Roleid = existingAcount.RoleId,
+                            Avatar = existingAcount.Avatar
                         };
                         return Ok(InforLogin);
                     }

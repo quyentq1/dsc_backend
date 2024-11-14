@@ -249,16 +249,31 @@ namespace dsc_backend.Controllers
         public async Task<IActionResult> getMySport([FromBody] UserSport usersport)
         {
             var userSportsList = await _db.UserSports
-                                       .Where(x => x.UserId == usersport.UserId)
-                                       .ToListAsync();
-            if (userSportsList != null)
+                .Where(x => x.UserId == usersport.UserId)
+                .ToListAsync();
+
+            if (userSportsList != null && userSportsList.Any())
             {
-                var ListViewSport = new
+                var sportIds = userSportsList.Select(x => x.SportId).ToList(); // Lấy danh sách SportId từ userSportsList
+
+                // Truy vấn bảng Sport để lấy SportName theo SportId
+                var sportDetails = await _db.Sports
+                    .Where(s => sportIds.Contains(s.SportId)) // Lọc theo SportId
+                    .Select(s => new
+                    {
+                        s.SportId,
+                        s.SportName
+                    })
+                    .ToListAsync();
+
+                // Kết hợp thông tin từ UserSports và Sport
+                var ListViewSport = userSportsList.Select(us => new
                 {
-                    Success = true,
-                    userSportsList
-                };
-                return Ok(ListViewSport);
+                    us.SportId,
+                    SportName = sportDetails.FirstOrDefault(sd => sd.SportId == us.SportId)?.SportName // Lấy SportName từ sportDetails
+                }).ToList();
+
+                return Ok(new { Success = true, ListViewSport });
             }
             else
             {
@@ -270,6 +285,7 @@ namespace dsc_backend.Controllers
                 return BadRequest(ListViewSport);
             }
         }
+
         [HttpPost("AddSportName")]
         public async Task<IActionResult> AddSportName([FromBody] UserSport usersport)
         {

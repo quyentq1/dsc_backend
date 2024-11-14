@@ -3,6 +3,7 @@ using dsc_backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
 
 namespace dsc_backend.Controllers
 {
@@ -123,18 +124,30 @@ namespace dsc_backend.Controllers
             
         }
 
-        [HttpPost("getrequestJoinClub")]
-        public async Task<IActionResult> getrequestJoinClub([FromBody] RequestJoinClub requestJoinClub)
+        [HttpGet("getrequestJoinClub/{clubId}")]
+        public async Task<IActionResult> getrequestJoinClub(int clubId)
         {
             if (requestJoinClub != null)
             {
-                var listjoinclub = await _db.RequestJoinClubs.Where(x => x.ClubId == requestJoinClub.ClubId)
-                                       .OrderByDescending(x => x.Status)
-                                       .ToListAsync();
+                var listjoinclub = await _db.RequestJoinClubs
+                    .Where(x => x.ClubId == clubId)
+                    .Include(x => x.User)
+                    .OrderByDescending(x => x.Status)
+                    .Select(x => new
+                    {
+                        x.ClubId,
+                        x.RequestClubId,
+                        x.UserId,
+                        x.Status,
+                        UserFullName = x.User.FullName,
+                        UserAvatar = x.User.Avatar
+
+                    })
+                    .ToListAsync();
                 var ListViewRequest = new
                 {
                     Success = true,
-                    listjoinclub,
+                    ListJoinClub = listjoinclub,
 
                 };
                 return Ok(ListViewRequest);
@@ -162,6 +175,23 @@ namespace dsc_backend.Controllers
                     requestjoin.Status = "2";
 
                     // Lưu thay đổi vào cơ sở dữ liệu
+                    await _db.SaveChangesAsync();
+                    var clubId = requestjoin.ClubId;
+                    var userId = requestjoin.UserId;
+                    var club = await _db.UserClubs
+                        .Where(a => a.ClubId == clubId && a.UserId == userId)
+                        .FirstOrDefaultAsync();
+                    if (club == null)
+                    {
+                        club = new UserClub
+                        {
+                            ClubId = clubId,
+                            UserId = userId,
+                            JoinDate = DateTime.Now,
+                            Role = "Player"
+                        };
+                        await _db.UserClubs.AddAsync(club);
+                    }
                     await _db.SaveChangesAsync();
                     var ListViewRequest = new
                     {
@@ -352,7 +382,9 @@ namespace dsc_backend.Controllers
                                (uc, u) => new    // Lấy thông tin FullName và Avatar của người dùng
                                {
                                    u.FullName,
-                                   u.Avatar
+                                   u.Avatar,
+                                   uc.Role,
+                                   uc.JoinDate
                                })
                          .ToList()  // Chuyển thành danh sách các người dùng
                  })

@@ -452,11 +452,7 @@ namespace dsc_backend.Controllers
                 Expense = firstActivity.Expense,
                 LevelName = firstActivity.Level?.LevelName // Kiểm tra null cho Level
             };
-
-            // Lấy danh sách UserId từ userActivities
             var userIds = userActivities.Select(ua => ua.UserId).ToList();
-
-            // Lấy thông tin memberInfo từ UserSport
             var memberInfo = await _db.UserSports
                 .Where(us => userIds.Contains(us.UserId))
                 .Include(us => us.Level) // Kết nối với Level
@@ -465,6 +461,7 @@ namespace dsc_backend.Controllers
             // Tạo danh sách memberInfo với RoleActivity
             var resultMemberInfo = memberInfo.Select(us => new
             {
+                UserId = us.UserId,
                 FullName = us.User.FullName,
                 RoleActivity = userActivities.FirstOrDefault(ua => ua.UserId == us.UserId)?.RoleInActivity,
                 LevelName = us.Level.LevelName
