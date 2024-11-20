@@ -1,8 +1,10 @@
-﻿using dsc_backend.Helper;
+﻿using dsc_backend.DAO;
+using dsc_backend.Helper;
 using dsc_backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Diagnostics;
 
 namespace dsc_backend.Controllers
 {
@@ -24,48 +26,104 @@ namespace dsc_backend.Controllers
             _webHostEnvironment = webHostEnvironment;
         }
         [HttpGet("getAllTournament")]
-        public async Task<IActionResult> getAllTournament()
+        public async Task<IActionResult> GetAllTournament([FromQuery] int userId)
         {
+            // Kiểm tra userId hợp lệ
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid userId.");
+            }
+
+            // Truy vấn danh sách Tournament
             var tournaments = await _db.Tournaments
-                .Include(t => t.Level) // Thông tin về Level
-                .Include(t => t.Comments) // Thông tin về Comments
-                .Include(t => t.Fees) // Thông tin về Fees
-                .Include(t => t.Notifications) // Thông tin về Notifications
-                .Include(t => t.Payments) // Thông tin về Payments
-                .Include(t => t.Rounds) // Thông tin về Rounds
-                .Include(t => t.TeamTournaments) // Thông tin về TeamTournaments
-                .Include(t => t.Teams) // Thông tin về Teams
-                .Include(t => t.User) // Thông tin về User
+                .Where(x => x.UserId == userId)
+                .Select(a => new
+                {
+                    a.TournamentId,
+                    a.Name,
+                    a.NumberOfTeams,
+                    a.Location,
+                    a.StartDate,
+                    a.EndDate,
+                })
                 .ToListAsync();
 
-            if (tournaments == null)
+            // Kiểm tra danh sách rỗng
+            if (!tournaments.Any())
             {
-                return NotFound();
+                return NotFound("No tournaments found for the given user.");
             }
 
             return Ok(tournaments);
         }
-        [HttpGet("getTournamentDetails")]
-        public async Task<IActionResult> getTournamentDetails([FromBody] Tournament tournament)
+        [HttpGet("getTournamentDetails/{tournamentId}")]
+        public async Task<IActionResult> getTournamentDetails(int tournamentId)
         {
             var tournaments = await _db.Tournaments
-                .Include(t => t.Level) // Thông tin về Level
-                .Include(t => t.Comments) // Thông tin về Comments
-                .Include(t => t.Fees) // Thông tin về Fees
-                .Include(t => t.Notifications) // Thông tin về Notifications
-                .Include(t => t.Payments) // Thông tin về Payments
-                .Include(t => t.Rounds) // Thông tin về Rounds
-                .Include(t => t.TeamTournaments) // Thông tin về TeamTournaments
-                .Include(t => t.Teams) // Thông tin về Teams
-                .Include(t => t.User) // Thông tin về User
-                .FirstOrDefaultAsync(c => c.TournamentId == tournament.TournamentId);
+                .Select(a => new
+                {
+                    a.TournamentId,
+                    a.Name,
+                    a.StartDate,
+                    a.Location,
+                    a.NumberOfTeams,
+                    a.Description,
+                    a.EndDate,
+                    // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
+                    LevelName = a.Level.LevelName
+                })
+                .Where(x => x.TournamentId == tournamentId)
+                .ToListAsync();
 
-            if (tournaments == null)
+            if (!tournaments.Any())
             {
                 return NotFound();
             }
 
             return Ok(tournaments);
         }
-    }
+        [HttpPost("createTournament")]
+        public async Task<IActionResult> createTournament([FromBody] CreateTournamentDAO tournaments)
+        {
+            if (tournaments == null)
+            {
+                return BadRequest("Invalid tournament data");
+            }
+
+            try
+            {
+                var AddTournament = new Tournament
+                {
+                    LevelId = tournaments.LevelId,
+                    Name = tournaments.Name,
+                    Description = tournaments.note,
+                    StartDate = tournaments.StartDate,
+                    EndDate = tournaments.EndDate,
+                    Location = tournaments.location,
+                    NumberOfTeams = tournaments.teamSize,
+                    CreatedDate = tournaments.startTime,
+                    UserId = tournaments.UserId,
+                };
+
+                await _db.Tournaments.AddAsync(AddTournament);
+                await _db.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Đã thêm kèo đấu thành công",
+                    Data = AddTournament
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "Lỗi khi tạo giải đấu",
+                    Error = ex.Message
+                });
+            }
+        }
+    } 
 }
