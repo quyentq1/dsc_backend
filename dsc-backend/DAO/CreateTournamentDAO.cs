@@ -6,7 +6,7 @@ namespace dsc_backend.DAO
     public class CreateTournamentDAO
     {
 
-            public int SportId { get; set; }
+        public int SportId { get; set; }
 
 
             public int LevelId { get; set; }

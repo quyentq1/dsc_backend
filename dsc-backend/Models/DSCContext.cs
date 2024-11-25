@@ -381,30 +381,27 @@ public partial class DscContext : DbContext
             entity.Property(e => e.TeamId).HasColumnName("TeamID");
             entity.Property(e => e.TeamName).HasMaxLength(255);
             entity.Property(e => e.TournamentId).HasColumnName("TournamentID");
-            entity.Property(e => e.UserTeamId).HasColumnName("UserTeamID");
 
             entity.HasOne(d => d.Tournament).WithMany(p => p.Teams)
                 .HasForeignKey(d => d.TournamentId)
                 .HasConstraintName("FK_Team_Tournament");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Teams)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_Team_User");
         });
 
         modelBuilder.Entity<TeamTournament>(entity =>
         {
-            entity.HasKey(e => e.TeamTournamentId).HasName("PK__TeamTour__7B13E8600C587259");
-
             entity.ToTable("TeamTournament");
 
             entity.Property(e => e.TeamTournamentId).HasColumnName("TeamTournamentID");
+            entity.Property(e => e.NamePlayer).HasMaxLength(100);
             entity.Property(e => e.TeamId).HasColumnName("TeamID");
-            entity.Property(e => e.TournamentId).HasColumnName("TournamentID");
 
             entity.HasOne(d => d.Team).WithMany(p => p.TeamTournaments)
                 .HasForeignKey(d => d.TeamId)
                 .HasConstraintName("FK_TeamTournament_Team");
-
-            entity.HasOne(d => d.Tournament).WithMany(p => p.TeamTournaments)
-                .HasForeignKey(d => d.TournamentId)
-                .HasConstraintName("FK_TeamTournament_Tournament");
         });
 
         modelBuilder.Entity<Tournament>(entity =>
@@ -416,6 +413,7 @@ public partial class DscContext : DbContext
             entity.Property(e => e.CreatedDate).HasColumnType("datetime");
             entity.Property(e => e.EndDate).HasColumnType("datetime");
             entity.Property(e => e.LevelId).HasColumnName("LevelID");
+            entity.Property(e => e.LimitRegister).HasColumnType("datetime");
             entity.Property(e => e.Location).HasMaxLength(255);
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.StartDate).HasColumnType("datetime");

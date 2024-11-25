@@ -29,6 +29,10 @@ public partial class Tournament
 
     public string? Avatar { get; set; }
 
+    public int? MemberOfTeams { get; set; }
+
+    public DateTime? LimitRegister { get; set; }
+
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     public virtual ICollection<Fee> Fees { get; set; } = new List<Fee>();
@@ -40,8 +44,6 @@ public partial class Tournament
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public virtual ICollection<Round> Rounds { get; set; } = new List<Round>();
-
-    public virtual ICollection<TeamTournament> TeamTournaments { get; set; } = new List<TeamTournament>();
 
     public virtual ICollection<Team> Teams { get; set; } = new List<Team>();
 

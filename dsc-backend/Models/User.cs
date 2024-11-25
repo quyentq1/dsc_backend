@@ -47,6 +47,8 @@ public partial class User
 
     public virtual Role? Role { get; set; }
 
+    public virtual ICollection<Team> Teams { get; set; } = new List<Team>();
+
     public virtual ICollection<Tournament> Tournaments { get; set; } = new List<Tournament>();
 
     public virtual ICollection<UserActivity> UserActivities { get; set; } = new List<UserActivity>();
