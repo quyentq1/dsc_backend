@@ -207,9 +207,9 @@ namespace dsc_backend.Controllers
                     StartDate = tournaments.StartDate,
                     EndDate = tournaments.EndDate,
                     Location = tournaments.location,
-                    NumberOfTeams = tournaments.teamSize,
+                    NumberOfTeams = tournaments.numberOfParticipants,
                     CreatedDate = tournaments.startTime,
-                    MemberOfTeams = tournaments.numberOfParticipants,
+                    MemberOfTeams = tournaments.teamSize,
                     LimitRegister = tournaments.RegistrationDeadline,
                     UserId = tournaments.UserId,
                 };
@@ -326,9 +326,9 @@ namespace dsc_backend.Controllers
                 existingTournament.EndDate = tournament.EndDate;
                 existingTournament.LimitRegister = tournament.RegistrationDeadline;
                 existingTournament.Location = tournament.location;
-                existingTournament.NumberOfTeams = tournament.teamSize;
+                existingTournament.NumberOfTeams = tournament.numberOfParticipants;
                 existingTournament.CreatedDate = tournament.startTime;
-                existingTournament.MemberOfTeams = tournament.numberOfParticipants;
+                existingTournament.MemberOfTeams = tournament.teamSize;
 
                 await _db.SaveChangesAsync();
 
