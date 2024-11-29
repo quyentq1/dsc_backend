@@ -13,6 +13,8 @@ public partial class Team
 
     public int? UserId { get; set; }
 
+    public string? Avatar { get; set; }
+
     public virtual ICollection<Match> MatchTeam1s { get; set; } = new List<Match>();
 
     public virtual ICollection<Match> MatchTeam2s { get; set; } = new List<Match>();

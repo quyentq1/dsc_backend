@@ -1,4 +1,6 @@
-﻿using dsc_backend.DAO;
+﻿using CloudinaryDotNet.Actions;
+using CloudinaryDotNet;
+using dsc_backend.DAO;
 using dsc_backend.Helper;
 using dsc_backend.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +49,7 @@ namespace dsc_backend.Controllers
         a.StartDate,
         a.EndDate,
         LevelName = a.Level.LevelName,
+        a.Avatar
     })
     .ToListAsync();
 
@@ -81,6 +84,7 @@ namespace dsc_backend.Controllers
         a.StartDate,
         a.EndDate,
         LevelName = a.Level.LevelName,
+        a.Avatar
     })
     .ToListAsync();
 
@@ -113,6 +117,7 @@ namespace dsc_backend.Controllers
                     a.Location,
                     a.StartDate,
                     a.EndDate,
+                    a.Avatar
                 })
                 .ToListAsync();
 
@@ -141,7 +146,8 @@ namespace dsc_backend.Controllers
                     a.LimitRegister,
                     a.CreatedDate,
                     a.LevelId,
-                    LevelName = a.Level.LevelName
+                    LevelName = a.Level.LevelName,
+                    a.Avatar
                     // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
 
                 })
@@ -188,18 +194,49 @@ namespace dsc_backend.Controllers
 
             return Ok(tournaments);
         }
+        private async Task<ImageUploadResult> UploadToCloudinary(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("File không hợp lệ");
+
+            var account = new Account(
+                "di6k4wpxl",
+                "791189184743261",
+                "xQRBuHQLrCQokqwVU777RrIyLDQ");
+
+            var cloudinary = new Cloudinary(account);
+
+            try
+            {
+                using (var stream = file.OpenReadStream())
+                {
+                    var uploadParams = new ImageUploadParams
+                    {
+                        File = new FileDescription(file.FileName, stream)
+                    };
+
+                    return await cloudinary.UploadAsync(uploadParams);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Lỗi khi upload ảnh lên Cloudinary", ex);
+            }
+        }
+
 
         [HttpPost("createTournament")]
-        public async Task<IActionResult> createTournament([FromBody] CreateTournamentDAO tournaments)
+        public async Task<IActionResult> CreateTournament([FromForm] CreateTournamentDAO tournaments, [FromForm] IFormFile file)
         {
             if (tournaments == null)
             {
-                return BadRequest("Invalid tournament data");
+                return BadRequest(new { Success = false, Message = "Dữ liệu giải đấu không hợp lệ" });
             }
 
             try
             {
-                var AddTournament = new Tournament
+                // Khởi tạo đối tượng Tournament
+                var addTournament = new Tournament
                 {
                     LevelId = tournaments.LevelId,
                     Name = tournaments.Name,
@@ -214,14 +251,38 @@ namespace dsc_backend.Controllers
                     UserId = tournaments.UserId,
                 };
 
-                await _db.Tournaments.AddAsync(AddTournament);
+                // Xử lý upload ảnh nếu có file
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            addTournament.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
+
+                // Lưu giải đấu vào database
+                await _db.Tournaments.AddAsync(addTournament);
                 await _db.SaveChangesAsync();
 
                 return Ok(new
                 {
                     Success = true,
                     Message = "Đã thêm kèo đấu thành công",
-                    Data = AddTournament
+                    Data = addTournament
                 });
             }
             catch (Exception ex)
@@ -234,6 +295,7 @@ namespace dsc_backend.Controllers
                 });
             }
         }
+
 
         [HttpPost("deleteTournament/{tournamentId}")]
         public async Task<IActionResult> deleteTournament(int tournamentId)
@@ -255,7 +317,7 @@ namespace dsc_backend.Controllers
 
         }
         [HttpPost("addMemberTeam")]
-        public async Task<IActionResult> addMemberTeam(AddMemberTeamDAO request)
+        public async Task<IActionResult> addMemberTeam([FromForm] AddMemberTeamDAO request, [FromForm] IFormFile file)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.TeamName) || request.Players == null || !request.Players.Any())
             {
@@ -271,7 +333,29 @@ namespace dsc_backend.Controllers
                     TournamentId = request.TournamentId,
                     UserId = request.UserId,
                     TeamName = request.TeamName
+
                 };
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            team.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
                 _db.Teams.Add(team);
                 await _db.SaveChangesAsync();
 
@@ -292,8 +376,8 @@ namespace dsc_backend.Controllers
                 return StatusCode(500, new { Success = false, Message = "An error occurred", Details = ex.Message });
             }
         }
-            [HttpPost("updateTounarment/{tournamentId}")]
-        public async Task<IActionResult> updateTounarment(int tournamentId, [FromBody] CreateTournamentDAO tournament)
+        [HttpPost("updateTounarment/{tournamentId}")]
+        public async Task<IActionResult> updateTounarment(int tournamentId, [FromForm] CreateTournamentDAO tournament, IFormFile file = null)
         {
             try
             {
@@ -319,16 +403,40 @@ namespace dsc_backend.Controllers
                 }
 
                 // Cập nhật thông tin giải đấu
-                existingTournament.Name = tournament.Name;
+                existingTournament.Name = tournament.Name ?? existingTournament.Name;
                 existingTournament.LevelId = tournament.LevelId;
-                existingTournament.Description = tournament.note;
-                existingTournament.StartDate = tournament.StartDate;
-                existingTournament.EndDate = tournament.EndDate;
-                existingTournament.LimitRegister = tournament.RegistrationDeadline;
-                existingTournament.Location = tournament.location;
-                existingTournament.NumberOfTeams = tournament.numberOfParticipants;
-                existingTournament.CreatedDate = tournament.startTime;
-                existingTournament.MemberOfTeams = tournament.teamSize;
+                existingTournament.Description = tournament.note ?? existingTournament.Description;
+                existingTournament.StartDate = tournament?.StartDate ?? existingTournament.StartDate;
+                existingTournament.EndDate = tournament?.EndDate ?? existingTournament.EndDate;
+                existingTournament.LimitRegister = tournament?.RegistrationDeadline ?? existingTournament.LimitRegister;
+                existingTournament.Location = tournament.location ?? existingTournament.Location;
+                existingTournament.NumberOfTeams = tournament?.numberOfParticipants ?? existingTournament.NumberOfTeams;
+                existingTournament.CreatedDate = tournament?.startTime ?? existingTournament.CreatedDate;
+                existingTournament.MemberOfTeams = tournament?.teamSize ?? existingTournament.MemberOfTeams;
+
+                // Chỉ xử lý file nếu có file được gửi lên
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            existingTournament.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
+                // Nếu không có file mới, giữ nguyên ảnh cũ
 
                 await _db.SaveChangesAsync();
 
@@ -348,7 +456,6 @@ namespace dsc_backend.Controllers
                     Error = ex.Message
                 });
             }
-
         }
         private async Task<int> GetOrCreateRoundId(int tournamentId, int roundNumber)
         {
@@ -477,6 +584,48 @@ namespace dsc_backend.Controllers
             {
                 return StatusCode(500, new { success = false, message = $"Internal server error: {ex.Message}" });
             }
+        }
+        [HttpGet("getListTeam/{tournamentId}")]
+        public async Task<IActionResult> GetListTeam(int tournamentId)
+        {
+            var tournaments = await _db.Teams
+                .Where(t => t.TournamentId == tournamentId) // Lọc các đội theo TournamentId
+                .Select(t => new
+                {
+                    t.TeamId,
+                    t.TournamentId,
+                    t.TeamName,
+                    t.Avatar,
+                    MemberCount = t.TeamTournaments.Count() // Đếm số lượng thành viên liên kết với TeamId
+                })
+                .ToListAsync();
+
+            if (!tournaments.Any())
+            {
+                return NotFound();
+            }
+
+            return Ok(tournaments);
+        }
+        [HttpPost("getListMember/{teamId}")]
+        public async Task<IActionResult> GetListMember(int teamId)
+        {
+            // Lấy danh sách thành viên theo TeamId
+            var members = await _db.TeamTournaments
+                .Where(tt => tt.TeamId == teamId) // Lọc theo TeamId
+                .Select(tt => new
+                {
+                    tt.NamePlayer, // Tên cầu thủ
+                    tt.NumberPlayer // Số áo cầu thủ
+                })
+                .ToListAsync();
+            // Nếu không tìm thấy thành viên hoặc thông tin đội, trả về lỗi
+            if (!members.Any() )
+            {
+                return NotFound(new { Message = "No members or team information found for the given IDs." });
+            }
+
+            return Ok(members);
         }
 
 

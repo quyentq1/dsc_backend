@@ -379,6 +379,7 @@ public partial class DscContext : DbContext
             entity.ToTable("Team");
 
             entity.Property(e => e.TeamId).HasColumnName("TeamID");
+            entity.Property(e => e.Avatar).HasMaxLength(255);
             entity.Property(e => e.TeamName).HasMaxLength(255);
             entity.Property(e => e.TournamentId).HasColumnName("TournamentID");
 

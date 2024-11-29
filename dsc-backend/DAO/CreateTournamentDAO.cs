@@ -18,7 +18,7 @@ namespace dsc_backend.DAO
 
             public DateTime EndDate { get; set; }
 
-        public DateTime startTime { get; set; }
+            public DateTime startTime { get; set; }
         
 
             public DateTime RegistrationDeadline { get; set; }
@@ -28,7 +28,7 @@ namespace dsc_backend.DAO
 
             public int UserId { get; set; }
 
-        public int teamSize { get; set; }
+            public int teamSize { get; set; }
             public string? note { get; set; }
 
             public string? location { get; set; }
