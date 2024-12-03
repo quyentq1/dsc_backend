@@ -281,6 +281,7 @@ namespace dsc_backend.Controllers
                 return Ok(new
                 {
                     Success = true,
+                    TournamentId = addTournament.TournamentId,
                     Message = "Đã thêm kèo đấu thành công",
                     Data = addTournament
                 });
