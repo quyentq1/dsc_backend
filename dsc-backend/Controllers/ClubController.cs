@@ -1,4 +1,7 @@
-﻿using dsc_backend.Helper;
+﻿using CloudinaryDotNet.Actions;
+using CloudinaryDotNet;
+using dsc_backend.DAO;
+using dsc_backend.Helper;
 using dsc_backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -263,10 +266,12 @@ namespace dsc_backend.Controllers
                 {
                     c.ClubId,
                     c.ClubName,
+                    c.LevelId,
                     LevelName = c.Level.LevelName,
                     c.Status,
                     c.Avatar,
                     c.Rules,
+                    c.SportId,
                     UserCount = _db.UserClubs.Count(uc => uc.ClubId == c.ClubId),
                     LeaderFullName = _db.UserClubs
                         .Where(uc => uc.ClubId == c.ClubId && uc.Role == "Leader")
@@ -297,6 +302,8 @@ namespace dsc_backend.Controllers
                 ClubDetails = new
                 {
                     club.ClubId,
+                    club.LevelId,
+                    club.SportId,
                     club.ClubName,
                     club.Rules,
                     club.LevelName,
@@ -397,7 +404,260 @@ namespace dsc_backend.Controllers
 
             return Ok(club);  // Trả về thông tin câu lạc bộ và danh sách thành viên
         }
+        private async Task<ImageUploadResult> UploadToCloudinary(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("File không hợp lệ");
 
+            var account = new Account(
+                "di6k4wpxl",
+                "791189184743261",
+                "xQRBuHQLrCQokqwVU777RrIyLDQ");
+
+            var cloudinary = new Cloudinary(account);
+
+            try
+            {
+                using (var stream = file.OpenReadStream())
+                {
+                    var uploadParams = new ImageUploadParams
+                    {
+                        File = new FileDescription(file.FileName, stream)
+                    };
+
+                    return await cloudinary.UploadAsync(uploadParams);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Lỗi khi upload ảnh lên Cloudinary", ex);
+            }
+        }
+
+        [HttpPost("createClub")]
+        public async Task<IActionResult> createClub([FromForm] CreateClubDAO clubs, [FromForm] IFormFile file)
+        {
+            if (clubs != null)
+            {
+                var level = await _db.Levels.Where(x => x.LevelId == clubs.SkillLevel).FirstOrDefaultAsync();
+                var AddClub = new Club
+                {
+                    SportId = clubs.Sport,
+                    LevelId = level?.LevelId,
+                    ClubName = clubs.ClubName,
+                    Status = "Active",
+                    Rules = clubs.Description,
+                    CreateDate = DateTime.Now,
+                };
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            AddClub.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
+                _db.Clubs.Add(AddClub);
+                _db.SaveChanges();
+                var clubId = AddClub.ClubId;
+                var ClubUser = new UserClub
+                {
+                    UserId = clubs.userId,
+                    ClubId = clubId,
+                    JoinDate = DateTime.Now,
+                    Role = "Leader"
+                };
+                _db.UserClubs.Add(ClubUser);
+                _db.SaveChanges();
+                var ListViewClub = new
+                {
+                    Success = true,
+                    UserId = clubs.userId,
+                    LevelId = AddClub.LevelId,
+                    ClubName = AddClub.ClubName,
+                    CreateDate = AddClub.CreateDate,
+                    Status = AddClub.Status,
+                    Rules = AddClub.Rules,
+                    Fund = AddClub.Fund,
+                    Avatar = AddClub.Avatar,
+                    Message = "Đã thêm câu lạc bộ thành công"
+
+                };
+                return Ok(ListViewClub);
+            }
+            else
+            {
+                var ListViewClub = new
+                {
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi thêm kèo đấu..."
+                };
+                return BadRequest(ListViewClub);
+            }
+
+        }
+        [HttpPost("updateClub/{clubId}")]
+        public async Task<IActionResult> updateClub(int clubId, [FromForm] CreateClubDAO clubs, IFormFile file = null)
+        {
+            if (clubs != null && clubId > 0)
+            {
+                // Tìm câu lạc bộ cần cập nhật
+                var existingClub = await _db.Clubs
+                    .Where(x => x.ClubId == clubId)
+                    .FirstOrDefaultAsync();
+
+                if (existingClub == null)
+                {
+                    return NotFound(new { Success = false, Message = "Câu lạc bộ không tồn tại." });
+                }
+
+                // Cập nhật thông tin câu lạc bộ
+                var level = await _db.Levels
+                    .Where(x => x.LevelId == clubs.SkillLevel)
+                    .FirstOrDefaultAsync();
+
+                existingClub.SportId = clubs.Sport;
+                existingClub.LevelId = clubs.SkillLevel;
+                existingClub.ClubName = clubs.ClubName;
+                existingClub.Rules = clubs.Description;
+
+                // Kiểm tra nếu có file thì upload và cập nhật ảnh đại diện
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            existingClub.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
+
+                // Lưu thay đổi
+                _db.Clubs.Update(existingClub);
+                await _db.SaveChangesAsync();
+
+                // Trả về thông tin câu lạc bộ đã cập nhật
+                var updatedClub = new
+                {
+                    Success = true,
+                    UserId = clubs.userId,
+                    LevelId = existingClub.LevelId,
+                    ClubName = existingClub.ClubName,
+                    Status = existingClub.Status,
+                    Rules = existingClub.Rules,
+                    Fund = existingClub.Fund,
+                    Avatar = existingClub.Avatar,
+                    Message = "Cập nhật câu lạc bộ thành công"
+                };
+
+                return Ok(updatedClub);
+            }
+            else
+            {
+                var errorResponse = new
+                {
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi cập nhật câu lạc bộ."
+                };
+                return BadRequest(errorResponse);
+            }
+        }
+        [HttpPost("stopClub")]
+        public async Task<IActionResult> stopClub([FromBody] StopClubRequest request)
+        {
+            if (request == null || request.ClubId <= 0)
+            {
+                return BadRequest(new { Success = false, Message = "Invalid Club ID" });
+            }
+
+            try
+            {
+                // Tìm câu lạc bộ theo ClubId
+                var club = await _db.Clubs.FirstOrDefaultAsync(c => c.ClubId == request.ClubId);
+                if (club == null)
+                {
+                    return NotFound(new { Success = false, Message = "Câu lạc bộ không tồn tại" });
+                }
+
+                // Cập nhật trạng thái câu lạc bộ thành "Inactive"
+                club.Status = "Inactive"; // Hoặc trạng thái bạn muốn để dừng hoạt động
+
+                // Lưu thay đổi vào database
+                await _db.SaveChangesAsync();
+
+                return Ok(new { Success = true, Message = "Câu lạc bộ đã dừng hoạt động thành công" });
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nếu có
+                _logger.LogError(ex, "Lỗi khi dừng hoạt động câu lạc bộ");
+
+                return StatusCode(500, new { Success = false, Message = "Đã xảy ra lỗi khi dừng hoạt động câu lạc bộ" });
+            }
+        }
+
+        public class StopClubRequest
+        {
+            public int ClubId { get; set; }
+        }
+        [HttpPost("activateClub")]
+        public async Task<IActionResult> activateClub([FromBody] StopClubRequest request)
+        {
+            if (request == null || request.ClubId <= 0)
+            {
+                return BadRequest(new { Success = false, Message = "Invalid Club ID" });
+            }
+
+            try
+            {
+                // Tìm câu lạc bộ theo ClubId
+                var club = await _db.Clubs.FirstOrDefaultAsync(c => c.ClubId == request.ClubId);
+                if (club == null)
+                {
+                    return NotFound(new { Success = false, Message = "Câu lạc bộ không tồn tại" });
+                }
+
+                // Cập nhật trạng thái câu lạc bộ thành "Inactive"
+                club.Status = "Active"; // Hoặc trạng thái bạn muốn để dừng hoạt động
+
+                // Lưu thay đổi vào database
+                await _db.SaveChangesAsync();
+
+                return Ok(new { Success = true, Message = "Câu lạc bộ đã dừng hoạt động thành công" });
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nếu có
+                _logger.LogError(ex, "Lỗi khi dừng hoạt động câu lạc bộ");
+
+                return StatusCode(500, new { Success = false, Message = "Đã xảy ra lỗi khi dừng hoạt động câu lạc bộ" });
+            }
+        }
 
     }
 }
