@@ -39,11 +39,11 @@ namespace dsc_backend.Controllers
                 })
                 .ToDictionaryAsync(x => x.ClubId, x => x.UserCount);
             var listClub = await _db.Clubs
-                .Where(club => !_db.UserClubs
-                    .Any(uc => uc.UserId == userId && uc.ClubId == club.ClubId))
-                .OrderByDescending(a => a.CreateDate)
-                .Select(a => new
-                {
+                    .Where(club => club.Status == "Active" && // Thêm điều kiện Status là Active
+                                   !_db.UserClubs.Any(uc => uc.UserId == userId && uc.ClubId == club.ClubId))
+                    .OrderByDescending(a => a.CreateDate)
+                    .Select(a => new
+                    {
                     a.ClubId,
                     a.ClubName,
                     LevelName = a.Level.LevelName,
@@ -72,6 +72,47 @@ namespace dsc_backend.Controllers
                 return BadRequest(ListViewClub);
             }
         }
+        [HttpGet("getClubJoined")]
+        public async Task<IActionResult> getClubJoined([FromQuery] int userId)
+        {
+            // Lấy danh sách Club mà user đã tham gia với role là "Player" và có Status là "Active"
+            var listClub = await _db.UserClubs
+                .Where(uc => uc.UserId == userId && uc.Role == "Player" && uc.Club.Status == "Active") // Thêm điều kiện Status
+                .Select(uc => uc.Club) // Truy cập vào Club thông qua quan hệ navigation
+                .OrderByDescending(c => c.CreateDate)
+                .Select(c => new
+                {
+                    c.ClubId,
+                    c.ClubName,
+                    LevelName = c.Level.LevelName,
+                    c.Status,
+                    UserCount = _db.UserClubs.Count(uc => uc.ClubId == c.ClubId), // Đếm số thành viên trong Club
+                    c.Avatar
+                })
+                .ToListAsync();
+
+            // Kiểm tra và trả kết quả
+            if (listClub.Any())
+            {
+                var ListViewClub = new
+                {
+                    Success = true,
+                    listClub
+                };
+                return Ok(ListViewClub);
+            }
+            else
+            {
+                var ListViewClub = new
+                {
+                    Success = false,
+                    Message = "Người dùng chưa tham gia Club nào với vai trò Player hoặc Club không còn hoạt động."
+                };
+                return BadRequest(ListViewClub);
+            }
+        }
+
+
 
         [HttpPost("requestJoinClub")]
         public async Task<IActionResult> requestJoinClub([FromBody] RequestJoinClub requestJoinClub)
@@ -125,6 +166,70 @@ namespace dsc_backend.Controllers
 
             }
             
+        }
+        [HttpPost("outClub")]
+        public async Task<IActionResult> outClub([FromBody] RequestJoinClub requestJoinClub)
+        {
+            bool requestRemoved = false;
+            bool userClubRemoved = false;
+
+            // Kiểm tra và xóa yêu cầu tham gia nếu tồn tại
+            var requestExist = await _db.RequestJoinClubs
+                .Where(x => x.ClubId == requestJoinClub.ClubId && x.UserId == requestJoinClub.UserId)
+                .FirstOrDefaultAsync();
+
+            if (requestExist != null)
+            {
+                _db.RequestJoinClubs.Remove(requestExist);
+                requestRemoved = true;
+            }
+
+            // Kiểm tra và xóa thành viên câu lạc bộ nếu tồn tại
+            var userClub = await _db.UserClubs
+                .Where(uc => uc.ClubId == requestJoinClub.ClubId && uc.UserId == requestJoinClub.UserId)
+                .FirstOrDefaultAsync();
+
+            if (userClub != null)
+            {
+                _db.UserClubs.Remove(userClub);
+                userClubRemoved = true;
+            }
+
+            // Nếu có ít nhất một thao tác xóa được thực hiện
+            if (requestRemoved || userClubRemoved)
+            {
+                await _db.SaveChangesAsync();
+
+                var successMessage = "";
+                if (requestRemoved && userClubRemoved)
+                {
+                    successMessage = "Đã xóa yêu cầu tham gia và rời khỏi câu lạc bộ thành công.";
+                }
+                else if (requestRemoved)
+                {
+                    successMessage = "Đã xóa yêu cầu tham gia thành công.";
+                }
+                else
+                {
+                    successMessage = "Đã rời khỏi câu lạc bộ thành công.";
+                }
+
+                var response = new
+                {
+                    Success = true,
+                    Message = successMessage
+                };
+                return Ok(response);
+            }
+            else
+            {
+                var response = new
+                {
+                    Success = false,
+                    Message = "Không tìm thấy yêu cầu tham gia hoặc thành viên trong câu lạc bộ."
+                };
+                return BadRequest(response);
+            }
         }
 
         [HttpGet("getrequestJoinClub/{clubId}")]
@@ -331,7 +436,7 @@ namespace dsc_backend.Controllers
                 })
                 .ToDictionaryAsync(x => x.ClubId, x => x.UserCount);
             var listClub = await _db.UserClubs
-                .Where(ua => ua.UserId == userId)
+                .Where(uc => uc.UserId == userId && uc.Role == "Leader")
                 .Include(ua => ua.Club)                
                     .ThenInclude(a => a.Level)
                                     .OrderByDescending(ua => ua.Club.CreateDate)
@@ -388,6 +493,7 @@ namespace dsc_backend.Controllers
                                u => u.UserId,    // với User.UserId
                                (uc, u) => new    // Lấy thông tin FullName và Avatar của người dùng
                                {
+                                   u.UserId,
                                    u.FullName,
                                    u.Avatar,
                                    uc.Role,
