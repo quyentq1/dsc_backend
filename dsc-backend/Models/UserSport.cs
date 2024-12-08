@@ -7,7 +7,7 @@ public partial class UserSport
 {
     public int UserSportId { get; set; }
 
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
 
     public int? SportId { get; set; }
 

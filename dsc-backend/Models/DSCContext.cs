@@ -15,6 +15,8 @@ public partial class DscContext : DbContext
     {
     }
 
+    public virtual DbSet<ActivitiesClub> ActivitiesClubs { get; set; }
+
     public virtual DbSet<Activity> Activities { get; set; }
 
     public virtual DbSet<Admin> Admins { get; set; }
@@ -38,6 +40,8 @@ public partial class DscContext : DbContext
     public virtual DbSet<RequestJoinClub> RequestJoinClubs { get; set; }
 
     public virtual DbSet<Result> Results { get; set; }
+
+    public virtual DbSet<ResultOfActivitiesClub> ResultOfActivitiesClubs { get; set; }
 
     public virtual DbSet<ResultOfActivity> ResultOfActivities { get; set; }
 
@@ -72,6 +76,30 @@ public partial class DscContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ActivitiesClub>(entity =>
+        {
+            entity.HasKey(e => e.ActivityClubId).HasName("PK__Activiti__140C4775A9591FFD");
+
+            entity.ToTable("ActivitiesClub");
+
+            entity.Property(e => e.ActivityClubId).HasColumnName("ActivityClubID");
+            entity.Property(e => e.ActivityName).HasMaxLength(255);
+            entity.Property(e => e.Avatar).HasMaxLength(255);
+            entity.Property(e => e.ClubId).HasColumnName("ClubID");
+            entity.Property(e => e.Expense).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.LevelId).HasColumnName("LevelID");
+            entity.Property(e => e.Location).HasMaxLength(255);
+            entity.Property(e => e.StartDate).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Club).WithMany(p => p.ActivitiesClubs)
+                .HasForeignKey(d => d.ClubId)
+                .HasConstraintName("FK_Activities_Club");
+
+            entity.HasOne(d => d.Level).WithMany(p => p.ActivitiesClubs)
+                .HasForeignKey(d => d.LevelId)
+                .HasConstraintName("FK_Activities_Level_Club");
+        });
+
         modelBuilder.Entity<Activity>(entity =>
         {
             entity.HasKey(e => e.ActivityId).HasName("PK__Activiti__45F4A7F1567643F0");
@@ -325,6 +353,20 @@ public partial class DscContext : DbContext
                 .HasConstraintName("FK_Result_Match");
         });
 
+        modelBuilder.Entity<ResultOfActivitiesClub>(entity =>
+        {
+            entity.HasKey(e => e.ResultId).HasName("PK__ResultOf__976902286446F8C5");
+
+            entity.ToTable("ResultOfActivitiesClub");
+
+            entity.Property(e => e.ResultId).HasColumnName("ResultID");
+            entity.Property(e => e.ActivityClubId).HasColumnName("ActivityClubID");
+
+            entity.HasOne(d => d.ActivityClub).WithMany(p => p.ResultOfActivitiesClubs)
+                .HasForeignKey(d => d.ActivityClubId)
+                .HasConstraintName("FK_ResultOfActivities_ActivityClub");
+        });
+
         modelBuilder.Entity<ResultOfActivity>(entity =>
         {
             entity.HasKey(e => e.ResultId).HasName("PK__ResultOf__976902283E28A99F");
@@ -519,10 +561,10 @@ public partial class DscContext : DbContext
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
-            entity.HasOne(d => d.Activity).WithMany(p => p.UserActivityClubs)
+            entity.HasOne(d => d.ActivityClub).WithMany(p => p.UserActivityClubs)
                 .HasForeignKey(d => d.ActivityId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UserActivityClub_Activity");
+                .HasConstraintName("FK_UserActivityClub_ActivityClub");
 
             entity.HasOne(d => d.Club).WithMany(p => p.UserActivityClubs)
                 .HasForeignKey(d => d.ClubId)

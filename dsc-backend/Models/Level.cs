@@ -11,6 +11,8 @@ public partial class Level
 
     public virtual ICollection<Activity> Activities { get; set; } = new List<Activity>();
 
+    public virtual ICollection<ActivitiesClub> ActivitiesClubs { get; set; } = new List<ActivitiesClub>();
+
     public virtual ICollection<Club> Clubs { get; set; } = new List<Club>();
 
     public virtual ICollection<Tournament> Tournaments { get; set; } = new List<Tournament>();

@@ -38,6 +38,4 @@ public partial class Activity
     public virtual User? User { get; set; }
 
     public virtual ICollection<UserActivity> UserActivities { get; set; } = new List<UserActivity>();
-
-    public virtual ICollection<UserActivityClub> UserActivityClubs { get; set; } = new List<UserActivityClub>();
 }

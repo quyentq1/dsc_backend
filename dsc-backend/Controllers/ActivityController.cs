@@ -51,6 +51,33 @@ namespace dsc_backend.Controllers
 
             return Ok(activities);
         }
+        [HttpGet("getAllActivityClub")]
+        public async Task<IActionResult> getAllActivityClub([FromQuery] int clubId)
+        {
+            var activities = await _db.ActivitiesClubs
+                .Where(a => a.ClubId == clubId)
+                .OrderByDescending(a => a.StartDate)
+                .Select(a => new
+                {
+                    a.ActivityClubId,
+                    a.ActivityName,
+                    a.StartDate,
+                    a.Location,
+                    a.NumberOfTeams,
+                    a.ClubId,
+                    LevelName = a.Level.LevelName,
+                    NumberOfParticipants = _db.UserActivityClubs.Count(u => u.ActivityId == a.ActivityClubId && u.Role == "Player"),
+                })
+                .ToListAsync();
+
+            if (!activities.Any())
+            {
+                return NotFound();
+            }
+
+            return Ok(activities);
+        }
+
 
         [HttpGet("getActivityJoined")]
         public async Task<IActionResult> getActivityJoined([FromQuery] int userId)
@@ -104,8 +131,66 @@ namespace dsc_backend.Controllers
             return Ok(activities);
         }
 
+        [HttpPost("createActivityClub")]
+        public async Task<IActionResult> createActivity([FromBody] CreateActivityClubDAO activitys)
+        {
+            if (activitys != null)
+            {
+                var level = await _db.Levels.Where(x => x.LevelName == activitys.minSkill).FirstOrDefaultAsync();
+                var AddActivity = new ActivitiesClub
+                {
+                    ClubId = activitys.clubId,
+                    LevelId = level?.LevelId,
+                    Description = activitys.description,
+                    ActivityName = activitys.name,
+                    StartDate = DateTime.Parse(activitys?.datetime),
+                    Location = activitys?.location,
+                    NumberOfTeams = activitys?.playerCount,
+                    Expense = activitys?.amount,
+                };
+                _db.ActivitiesClubs.Add(AddActivity);
+                _db.SaveChanges();
+                var activityId = AddActivity.ActivityClubId;
+                var ActivityUser = new UserActivityClub
+                {
+                    ClubId = activitys.clubId,
+                    UserId = activitys.UserId,
+                    ActivityId = activityId,
+                    JoinDate = DateTime.Now,
+                    Status = "Active",
+                    Role = "Admin"
+                };
+                _db.UserActivityClubs.Add(ActivityUser);
+                _db.SaveChanges();
+                var ListViewActivity = new
+                {
+                    Success = true,
+                    ClubId = AddActivity.ClubId,
+                    LevelId = AddActivity.LevelId,
+                    ActivityName = AddActivity.ActivityName,
+                    StartDate = AddActivity.StartDate,
+                    Location = AddActivity.Location,
+                    NumberOfTeams = AddActivity.NumberOfTeams,
+                    Expense = AddActivity.Expense,
+                    Description = AddActivity.Description,
+                    Message = "Đã thêm kèo đấu thành công"
+
+                };
+                return Ok(ListViewActivity);
+            }
+            else
+            {
+                var ListViewActivity = new
+                {
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi thêm kèo đấu..."
+                };
+                return BadRequest(ListViewActivity);
+            }
+
+        }
         [HttpPost("createActivity")]
-        public async Task<IActionResult> createActivity([FromBody] CreateActivityDAO activitys)
+        public async Task<IActionResult> createActivityClub([FromBody] CreateActivityDAO activitys)
         {
             if (activitys != null)
             {
@@ -208,6 +293,55 @@ namespace dsc_backend.Controllers
             }
 
         }
+        [HttpPost("uppdateActivityClub")]
+        public async Task<IActionResult> uppdateActivityClub([FromBody] CreateActivityDAO activitys)
+        {
+            if (activitys != null)
+            {
+                var ActivityExist = await _db.ActivitiesClubs.FirstOrDefaultAsync(x => x.ActivityClubId == activitys.activityId);
+                var level = await _db.Levels.Where(x => x.LevelName == activitys.minSkill).FirstOrDefaultAsync();
+                if (ActivityExist == null)
+                {
+                    return NotFound("kèo đấu không tồn tại.");
+                }
+                var StartDate = DateTime.Parse(activitys?.datetime);
+                ActivityExist.ActivityName = activitys.name ?? ActivityExist.ActivityName;
+                ActivityExist.LevelId = level?.LevelId ?? ActivityExist.LevelId;
+                ActivityExist.StartDate = (DateTime?)StartDate ?? ActivityExist.StartDate;
+                ActivityExist.Location = activitys.location ?? ActivityExist.Location;
+                ActivityExist.NumberOfTeams = (int?)activitys.playerCount ?? ActivityExist.NumberOfTeams;
+                ActivityExist.Expense = activitys.amount ?? ActivityExist.Expense;
+                ActivityExist.Description = activitys.description ?? ActivityExist.Description;
+                _db.ActivitiesClubs.Update(ActivityExist);
+                await _db.SaveChangesAsync();
+                var updatedactivity = new
+                {
+                    Success = true,
+                    ActivityClubId = ActivityExist.ActivityClubId,
+                    ClubId = ActivityExist.ClubId,
+                    LevelId = ActivityExist.LevelId,
+                    ActivityName = ActivityExist.ActivityName,
+                    StartDate = ActivityExist.StartDate,
+                    Location = ActivityExist.Location,
+                    NumberOfTeams = ActivityExist.NumberOfTeams,
+                    Expense = ActivityExist.Expense,
+                    Description = ActivityExist.Description,
+                    Message = "Đã thêm kèo đấu thành công"
+                };
+
+                return Ok(updatedactivity);
+            }
+            else
+            {
+                var ListViewActivity = new
+                {
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi cập nhật kèo đấu..."
+                };
+                return BadRequest(ListViewActivity);
+            }
+
+        }
         [HttpPost("requestJoinActivity")]
         public async Task<IActionResult> requestJoinActivity([FromBody] CreateActivityDAO requestJoinActivity)
         {
@@ -255,6 +389,69 @@ namespace dsc_backend.Controllers
                 }
             }
         }
+        [HttpPost("joinActivityClub")]
+        public async Task<IActionResult> joinActivityClub([FromBody] CreateActivityClubDAO requestJoinActivity)
+        {
+            {
+                if (requestJoinActivity != null)
+                {
+                    var joinActivitynew = new UserActivityClub
+                    {
+
+                        UserId = requestJoinActivity.UserId,
+                        ActivityId = requestJoinActivity.activityclubId,
+                        Status = "Active",
+                        JoinDate = DateTime.Now,
+                        ClubId = requestJoinActivity.clubId,
+                        Role = "Player"
+                    };
+                    _db.UserActivityClubs.Add(joinActivitynew);
+                    _db.SaveChanges();
+                    var ListViewRequest = new
+                    {
+                        Success = true,
+                        Message = "Đã gởi đơn xin tham gia kèo đấu thành công"
+
+                    };
+                    return Ok(ListViewRequest);
+                }
+                else
+                {
+                    var ListViewRequest = new
+                    {
+                        Success = false,
+                        Message = "Có lỗi trong việc gởi đơn tham gia kèo đấu"
+                    };
+                    return BadRequest(ListViewRequest);
+                }
+            }
+        }
+        [HttpPost("getInforJoinned")]
+        public async Task<IActionResult> getInforJoinned([FromBody] CreateActivityClubDAO requestJoinActivity)
+        {
+            if (requestJoinActivity == null)
+            {
+                return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ." });
+            }
+
+            // Kiểm tra xem dữ liệu đã tồn tại hay chưa
+            var requestExist = await _db.UserActivityClubs
+                .Where(x => x.ActivityId == requestJoinActivity.activityclubId
+                         && x.UserId == requestJoinActivity.UserId
+                         && x.ClubId == requestJoinActivity.clubId)
+                .FirstOrDefaultAsync();
+
+            // Nếu đã tồn tại thì trả về thông báo success: true
+            if (requestExist != null)
+            {
+                return Ok(new { success = true, message = "Người dùng đã tham gia hoạt động này trước đó." });
+            }
+
+            // Nếu chưa tồn tại thì trả về success: false
+            return Ok(new { success = false, message = "Người dùng chưa tham gia hoạt động này." });
+        }
+
+
         [HttpGet("getrequestJoinActivity/{activityId}")]
         public async Task<IActionResult> GetRequestJoinActivity(int activityId)
         {
@@ -420,6 +617,35 @@ namespace dsc_backend.Controllers
 
             return Ok(activitys);
         }
+        [HttpGet("getActivityDetailsClub/{activityclubId}")]
+        public async Task<IActionResult> getActivityDetailsClub(int activityclubId)
+        {
+            var activitys = await _db.ActivitiesClubs
+                .Select(a => new
+                {
+                    a.ActivityClubId,
+                    a.ActivityName,
+                    a.ClubId,
+                    a.StartDate,
+                    a.Location,
+                    a.NumberOfTeams,
+                    a.Description,
+                    a.Expense,
+
+                    NumberOfParticipants = _db.UserActivityClubs.Count(u => u.ActivityId == a.ActivityClubId && u.Role == "Player"),
+                    // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
+                    LevelName = a.Level.LevelName
+                })
+                .Where(x => x.ActivityClubId == activityclubId)
+                .ToListAsync();
+
+            if (!activitys.Any())
+            {
+                return NotFound();
+            }
+
+            return Ok(activitys);
+        }
         [HttpGet("getMemberActivity/{activityId}")]
         public async Task<IActionResult> getMemberActivity(int activityId)
         {
@@ -462,6 +688,7 @@ namespace dsc_backend.Controllers
             var resultMemberInfo = memberInfo.Select(us => new
             {
                 UserId = us.UserId,
+                AvatarUser = us.User.Avatar,
                 FullName = us.User.FullName,
                 RoleActivity = userActivities.FirstOrDefault(ua => ua.UserId == us.UserId)?.RoleInActivity,
                 LevelName = us.Level.LevelName
@@ -475,5 +702,71 @@ namespace dsc_backend.Controllers
 
             return Ok(result);
         }
+        [HttpGet("getMemberActivityClub/{activityclubId}")]
+        public async Task<IActionResult> getMemberActivityClub(int activityclubId)
+        {
+            // Lấy danh sách UserActivities theo ActivityId
+            var userActivities = await _db.UserActivityClubs
+                .Where(ua => ua.ActivityId == activityclubId)
+                .Include(ua => ua.User) // Kết nối với bảng User
+                .Include(ua => ua.ActivityClub) // Kết nối với bảng Activity
+                .ToListAsync();
+
+            if (!userActivities.Any())
+            {
+                return NotFound("Không tìm thấy thông tin hoạt động hoặc thành viên.");
+            }
+
+            var firstActivity = userActivities.First().ActivityClub;
+            if (firstActivity == null)
+            {
+                return NotFound("Không tìm thấy thông tin hoạt động.");
+            }
+
+            // Thông tin hoạt động
+            var activity = new
+            {
+                ActivityId = firstActivity.ActivityClubId,
+                ActivityName = firstActivity.ActivityName,
+                StartDate = firstActivity.StartDate,
+                Location = firstActivity.Location,
+                NumberOfTeams = firstActivity.NumberOfTeams,
+                Description = firstActivity.Description,
+                Expense = firstActivity.Expense,
+                LevelName = firstActivity.Level?.LevelName // Kiểm tra null cho Level
+            };
+
+            // Danh sách UserId từ UserActivityClubs
+            var userIds = userActivities.Select(ua => ua.UserId).ToList();
+
+            // Lấy thông tin member từ UserSports
+            var memberInfo = await _db.UserSports
+                .Where(us => userIds.Contains(us.UserId))
+                .Include(us => us.Level) // Kết nối với Level
+                .ToListAsync();
+
+            // Tạo danh sách memberInfo với RoleActivity
+            var resultMemberInfo = memberInfo.Select(us => new
+            {
+                UserId = us.UserId,
+                AvatarUser = us.User.Avatar,
+                FullName = us.User.FullName,
+                RoleActivity = userActivities.FirstOrDefault(ua => ua.UserId == us.UserId)?.Role,
+                LevelName = us.Level?.LevelName
+            }).ToList();
+
+            // Đếm số lượng thành viên có Role == "Player"
+            int playerCount = userActivities.Count(ua => ua.Role == "Player");
+
+            var result = new
+            {
+                Activity = activity,
+                MemberInfo = resultMemberInfo,
+                PlayerCount = playerCount // Thêm số lượng thành viên có Role là "Player"
+            };
+
+            return Ok(result);
+        }
+
     }
 }

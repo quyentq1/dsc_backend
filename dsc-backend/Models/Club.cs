@@ -23,6 +23,8 @@ public partial class Club
 
     public string? Avatar { get; set; }
 
+    public virtual ICollection<ActivitiesClub> ActivitiesClubs { get; set; } = new List<ActivitiesClub>();
+
     public virtual Level? Level { get; set; }
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
