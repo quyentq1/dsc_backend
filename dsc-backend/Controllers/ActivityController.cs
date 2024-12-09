@@ -709,7 +709,7 @@ namespace dsc_backend.Controllers
             var userActivities = await _db.UserActivityClubs
                 .Where(ua => ua.ActivityId == activityclubId)
                 .Include(ua => ua.User) // Kết nối với bảng User
-                .Include(ua => ua.ActivityClub) // Kết nối với bảng Activity
+                .Include(ua => ua.Activity) // Kết nối với bảng Activity
                 .ToListAsync();
 
             if (!userActivities.Any())
@@ -717,7 +717,7 @@ namespace dsc_backend.Controllers
                 return NotFound("Không tìm thấy thông tin hoạt động hoặc thành viên.");
             }
 
-            var firstActivity = userActivities.First().ActivityClub;
+            var firstActivity = userActivities.First().Activity;
             if (firstActivity == null)
             {
                 return NotFound("Không tìm thấy thông tin hoạt động.");

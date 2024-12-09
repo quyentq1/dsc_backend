@@ -221,9 +221,11 @@ public partial class DscContext : DbContext
             entity.ToTable("Match");
 
             entity.Property(e => e.MatchId).HasColumnName("MatchID");
+            entity.Property(e => e.Location).HasMaxLength(255);
             entity.Property(e => e.RoundId).HasColumnName("RoundID");
             entity.Property(e => e.Team1Id).HasColumnName("Team1ID");
             entity.Property(e => e.Team2Id).HasColumnName("Team2ID");
+            entity.Property(e => e.Time).HasColumnType("datetime");
 
             entity.HasOne(d => d.Round).WithMany(p => p.Matches)
                 .HasForeignKey(d => d.RoundId)
@@ -236,6 +238,11 @@ public partial class DscContext : DbContext
             entity.HasOne(d => d.Team2).WithMany(p => p.MatchTeam2s)
                 .HasForeignKey(d => d.Team2Id)
                 .HasConstraintName("FK_Match_Team2");
+
+            entity.HasOne(d => d.Tournament).WithMany(p => p.Matches)
+                .HasForeignKey(d => d.TournamentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Match_Tournaments");
         });
 
         modelBuilder.Entity<Notification>(entity =>
@@ -561,7 +568,7 @@ public partial class DscContext : DbContext
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
-            entity.HasOne(d => d.ActivityClub).WithMany(p => p.UserActivityClubs)
+            entity.HasOne(d => d.Activity).WithMany(p => p.UserActivityClubs)
                 .HasForeignKey(d => d.ActivityId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserActivityClub_ActivityClub");

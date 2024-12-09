@@ -39,6 +39,8 @@ public partial class Tournament
 
     public virtual Level? Level { get; set; }
 
+    public virtual ICollection<Match> Matches { get; set; } = new List<Match>();
+
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();

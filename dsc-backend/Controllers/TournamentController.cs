@@ -183,7 +183,7 @@ namespace dsc_backend.Controllers
                     LevelName = a.Level.LevelName,
                     TeamId = a.Teams.Select(t=>t.TeamId).ToList(),
                     TeamCount = a.Teams.Count(), // Đếm số lượng team
-                    TeamNames = a.Teams.Select(t => t.TeamName).ToList() // Lấy danh sách tên của các team
+                    TeamNames = a.Teams.Select(t => t.TeamName).ToList()
                 })
                 .ToListAsync();
 
@@ -460,14 +460,14 @@ namespace dsc_backend.Controllers
         }
         private async Task<int> GetOrCreateRoundId(int tournamentId, int roundNumber)
         {
-            // Thêm điều kiện TournamentId vào query
+            // Kiểm tra vòng có TournamentId và RoundNumber
             var round = await _db.Rounds
                 .Where(r => r.TournamentId == tournamentId && r.RoundNumber == roundNumber)
                 .FirstOrDefaultAsync();
 
             if (round == null)
             {
-                // Tạo mới round với TournamentId được chỉ định
+                // Tạo mới vòng với TournamentId và RoundNumber
                 round = new Round
                 {
                     TournamentId = tournamentId,
@@ -480,55 +480,73 @@ namespace dsc_backend.Controllers
 
             return round.RoundId;
         }
+
         [HttpPost("saveTournamentResults")]
         public async Task<IActionResult> SaveTournamentResults([FromBody] SaveTournamentResultsRequest request)
         {
-            if (request.Matches == null || request.Matches.Count == 0)
+            if (request == null || request.Matches.Count == 0)
             {
                 return BadRequest("No match data provided.");
             }
 
             try
             {
-                foreach (var round in request.Matches)
+                foreach (var roundData in request.Matches)
                 {
-                    int roundNumber = int.Parse(round.Key);
-                    List<MatchDAO> roundMatches = round.Value;
+                    int roundNumber = int.Parse(roundData.Key);
+                    List<MatchDAO> roundMatches = roundData.Value;
 
-                    // Lấy hoặc tạo RoundId
-                    int roundId = await GetOrCreateRoundId(request.TournamentId, roundNumber);
+                    // Lấy hoặc tạo Round
+                    var round = await _db.Rounds.FirstOrDefaultAsync(r =>
+                        r.TournamentId == request.TournamentId &&
+                        r.RoundNumber == roundNumber);
 
-                    // Log để kiểm tra
-                    _logger.LogInformation($"Created/Retrieved RoundId: {roundId} for TournamentId: {request.TournamentId}, RoundNumber: {roundNumber}");
+                    if (round == null)
+                    {
+                        round = new Round
+                        {
+                            TournamentId = request.TournamentId,
+                            RoundNumber = roundNumber
+                        };
+                        _db.Rounds.Add(round);
+                        await _db.SaveChangesAsync(); // Lưu để có RoundId
+                    }
 
                     foreach (var matchDto in roundMatches)
                     {
-                        // Tìm hoặc tạo trận đấu
-                        var match = await _db.Matches
-                            .FirstOrDefaultAsync(m => m.RoundId == roundId && m.MatchNumber == matchDto.MatchNumber);
+                        // Lấy hoặc tạo Match
+                        var match = await _db.Matches.FirstOrDefaultAsync(m =>
+                            m.RoundId == round.RoundId &&
+                            m.MatchNumber == matchDto.MatchNumber);
 
                         if (match == null)
                         {
                             match = new Match
                             {
-                                RoundId = roundId,
-                                MatchNumber = matchDto.MatchNumber
+                                RoundId = round.RoundId,
+                                TournamentId = request.TournamentId, // Thêm TournamentId
+                                MatchNumber = matchDto.MatchNumber,
+                                Team1Id = matchDto.Team1Id,
+                                Team2Id = matchDto.Team2Id,
+                                Time = matchDto.Time,           // Thêm Time
+                                Location = matchDto.Location    // Thêm Location
                             };
-                            if (matchDto.Team1Id.HasValue) match.Team1Id = matchDto.Team1Id.Value;
-                            if (matchDto.Team2Id.HasValue) match.Team2Id = matchDto.Team2Id.Value;
                             _db.Matches.Add(match);
+                            await _db.SaveChangesAsync(); // Lưu để có MatchId
                         }
                         else
                         {
-                            // Cập nhật thông tin trận đấu nếu cần
-                            if (matchDto.Team1Id.HasValue) match.Team1Id = matchDto.Team1Id.Value;
-                            if (matchDto.Team2Id.HasValue) match.Team2Id = matchDto.Team2Id.Value;
+                            // Cập nhật Match nếu cần
+                            match.Team1Id = matchDto.Team1Id;
+                            match.Team2Id = matchDto.Team2Id;
+                            match.TournamentId = request.TournamentId; // Cập nhật TournamentId
+                            match.Time = matchDto.Time;         // Cập nhật Time
+                            match.Location = matchDto.Location; // Cập nhật Location
                             _db.Matches.Update(match);
+                            await _db.SaveChangesAsync();
                         }
 
-                        await _db.SaveChangesAsync(); // Lưu để có MatchId
-
-                        // Chỉ xử lý kết quả nếu có ít nhất một điểm số
+                        // Lưu kết quả nếu có, với điều kiện là điểm số có giá trị
                         if (matchDto.Score1.HasValue || matchDto.Score2.HasValue)
                         {
                             var result = await _db.Results.FirstOrDefaultAsync(r => r.MatchId == match.MatchId);
@@ -536,17 +554,16 @@ namespace dsc_backend.Controllers
                             {
                                 result = new Result
                                 {
-                                    MatchId = match.MatchId
+                                    MatchId = match.MatchId,
+                                    ScoreTeam1 = matchDto.Score1,
+                                    ScoreTeam2 = matchDto.Score2
                                 };
-                                if (matchDto.Score1.HasValue) result.ScoreTeam1 = matchDto.Score1.Value;
-                                if (matchDto.Score2.HasValue) result.ScoreTeam2 = matchDto.Score2.Value;
                                 _db.Results.Add(result);
                             }
                             else
                             {
-                                // Cập nhật kết quả nếu đã tồn tại
-                                if (matchDto.Score1.HasValue) result.ScoreTeam1 = matchDto.Score1.Value;
-                                if (matchDto.Score2.HasValue) result.ScoreTeam2 = matchDto.Score2.Value;
+                                result.ScoreTeam1 = matchDto.Score1;
+                                result.ScoreTeam2 = matchDto.Score2;
                                 _db.Results.Update(result);
                             }
                         }
@@ -561,31 +578,58 @@ namespace dsc_backend.Controllers
                 return StatusCode(500, new { success = false, message = $"Internal server error: {ex.Message}" });
             }
         }
+
+
+
         [HttpGet("getTournamentResults/{tournamentId}")]
         public async Task<IActionResult> GetTournamentResults(int tournamentId)
         {
             try
             {
                 var results = await _db.Matches
-                    .Include(m => m.Round) // Thêm Include để đảm bảo load được Round
-                    .Where(m => m.Round.TournamentId == tournamentId) // Lọc theo tournamentId
-                    .Select(m => new {
-                        RoundNumber = m.Round.RoundNumber,
-                        MatchNumber = m.MatchNumber,
-                        Team1Id = m.Team1Id,
-                        Team2Id = m.Team2Id,
-                        Score1 = m.Results.Select(a => a.ScoreTeam1),
-                        Score2 = m.Results.Select(a => a.ScoreTeam2)
-                    })
+                    .Include(m => m.Round) // Load thông tin Round
+                    .Include(m => m.Results) // Load thông tin Results
+                    .Include(m => m.Team1) // Bao gồm thông tin đội 1
+                    .Include(m => m.Team2) // Bao gồm thông tin đội 2
+                    .Where(m => m.Round.TournamentId == tournamentId && m.TournamentId == tournamentId) // Thêm điều kiện TournamentId tại Match
+                    .OrderBy(m => m.Round.RoundNumber) // Sắp xếp theo RoundNumber
+                    .ThenBy(m => m.MatchNumber) // Sắp xếp thêm theo MatchNumber
                     .ToListAsync();
 
-                return Ok(results);
+                var data = results.Select(m => new
+                {
+                    RoundNumber = m.Round.RoundNumber, // Thông tin Round
+                    MatchNumber = m.MatchNumber,       // Số trận đấu
+                    Team1Id = m.Team1Id,               // ID đội 1
+                    Team2Id = m.Team2Id,               // ID đội 2
+                    Team1Name = m.Team1?.TeamName, // Tên đội 1 (Nếu không có thì trả về TBD)
+                    Team2Name = m.Team2?.TeamName, // Tên đội 2 (Nếu không có thì trả về TBD)
+                    Score1 = m.Results.FirstOrDefault()?.ScoreTeam1, // Điểm đội 1
+                    Score2 = m.Results.FirstOrDefault()?.ScoreTeam2, // Điểm đội 2
+                    Time = m.Time,           // Thêm Time
+                    Location = m.Location
+                }).ToList();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Tournament results fetched successfully.",
+                    data = data
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = $"Internal server error: {ex.Message}" });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = $"Internal server error: {ex.Message}"
+                });
             }
         }
+
+
+
+
         [HttpGet("getListTeam/{tournamentId}")]
         public async Task<IActionResult> GetListTeam(int tournamentId)
         {

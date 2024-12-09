@@ -19,9 +19,9 @@ public partial class UserActivityClub
 
     public string? Status { get; set; }
 
-    public virtual ActivitiesClub ActivityClub { get; set; } = null!;
+    public virtual ActivitiesClub? Activity { get; set; }
 
-    public virtual Club Club { get; set; } = null!;
+    public virtual Club? Club { get; set; }
 
-    public virtual User User { get; set; } = null!;
+    public virtual User? User { get; set; }
 }
