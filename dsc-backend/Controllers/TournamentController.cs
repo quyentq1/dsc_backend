@@ -147,9 +147,8 @@ namespace dsc_backend.Controllers
                     a.CreatedDate,
                     a.LevelId,
                     LevelName = a.Level.LevelName,
-                    a.Avatar
-                    // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
-
+                    a.Avatar,
+                    NumberOfRegisteredTeams = _db.Teams.Count(t => t.TournamentId == a.TournamentId) // Đếm số team đã tham gia
                 })
                 .Where(x => x.TournamentId == tournamentId)
                 .ToListAsync();
@@ -161,6 +160,7 @@ namespace dsc_backend.Controllers
 
             return Ok(tournaments);
         }
+
         [HttpGet("getTeamTournament/{tournamentId}")]
         public async Task<IActionResult> GetTeamTournament(int tournamentId)
         {
