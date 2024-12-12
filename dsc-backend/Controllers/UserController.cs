@@ -96,7 +96,7 @@ namespace dsc_backend.Controllers
             existingUser.Age = user.Age ?? existingUser.Age;
             existingUser.Weight = user.Weight ?? existingUser.Weight;
             existingUser.Avatar = user.Avatar ?? existingUser.Avatar;
-            existingUser.Height = existingUser.Height ?? existingUser.Height;
+            existingUser.Height = user.Height ?? existingUser.Height;
             _db.Users.Update(existingUser);
             await _db.SaveChangesAsync();
             var updatedUserInfo = new

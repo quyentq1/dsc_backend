@@ -30,56 +30,81 @@ namespace dsc_backend.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> LoginEmail([FromBody] User user)
         {
-            var existingUser = await _db.Users.FirstOrDefaultAsync(x => x.Email == user.Email);
-            if (existingUser != null)
+            // Kiểm tra nếu là Admin
+            var existingAdmin = await _db.Admins
+                .FirstOrDefaultAsync(y => y.Email == user.Email && y.Password == user.Password);
+
+            if (existingAdmin != null)
             {
-                if (existingUser.Password != null)
+                // Đăng nhập thành công cho Admin
+                return Ok(new
                 {
-                    var hashPass = _hashpass.MD5Hash(user.Password);
-                    var existingAcount = await _db.Users.FirstOrDefaultAsync(y => y.Email == user.Email && y.Password == hashPass);
-                    if (existingAcount != null)
-                    {
-                        var InforLogin = new
-                        {
-                            Success = true,
-                            UserId = existingAcount.UserId,
-                            FullName = existingAcount.FullName,
-                            Email = existingAcount.Email,
-                            Roleid = existingAcount.RoleId,
-                            Avatar = existingAcount.Avatar
-                        };
-                        return Ok(InforLogin);
-                    }
-                    else
-                    {
-                        var InforLogin = new
-                        {
-                            Success = false,
-                            Message = "Sai Tài Khoản Hoặc Mật Khẩu !"
-                        };
-                        return BadRequest(InforLogin);
-                    }
-                }
-                else
-                {
-                    var InforLogin = new
-                    {
-                        Success = false,
-                        Message = "User login by account Google. Not yet register by email and password !"
-                    };
-                    return BadRequest(InforLogin);
-                }
+                    Success = true,
+                    Message = "Welcome Admin",
+                    UserId = existingAdmin.AdminId,
+                    Email = existingAdmin.Email,
+                    RoleId = "Admin",
+                    Fund = existingAdmin.Fund,
+                });
             }
-            else
+
+            // Kiểm tra nếu là User
+            var existingUser = await _db.Users.FirstOrDefaultAsync(x => x.Email == user.Email);
+
+            if (existingUser == null)
             {
-                var InforLogin = new
+                // Người dùng không tồn tại
+                return BadRequest(new
                 {
                     Success = false,
-                    Message = "Không Tồn Tại User !"
-                };
-                return BadRequest(InforLogin);
+                    Message = "Sai Tài Khoản Hoặc Mật Khẩu!"
+                });
             }
+
+            // Mã hóa mật khẩu người dùng nhập vào
+            var hashPass = _hashpass.MD5Hash(user.Password);
+
+            // Kiểm tra mật khẩu
+            var existingAccount = await _db.Users
+                .FirstOrDefaultAsync(y => y.Email == user.Email && y.Password == hashPass);
+
+            if (existingAccount == null)
+            {
+                // Mật khẩu sai
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Sai Tài Khoản Hoặc Mật Khẩu!"
+                });
+            }
+
+            // Kiểm tra trạng thái người dùng
+            if (existingAccount.Status != "Active")
+            {
+                // Trạng thái người dùng không phải "Active"
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Tài khoản của bạn đã bị vô hiệu hóa bởi Quản Trị Viên!"
+                });
+            }
+
+            // Đăng nhập thành công cho User
+            return Ok(new
+            {
+                Success = true,
+                UserId = existingAccount.UserId,
+                FullName = existingAccount.FullName,
+                Email = existingAccount.Email,
+                RoleId = existingAccount.RoleId,
+                Avatar = existingAccount.Avatar,
+                Status = existingAccount.Status
+            });
         }
+
+
+
+
 
         [HttpGet("login-google")]
         public IActionResult LoginGoogle()
@@ -122,7 +147,8 @@ namespace dsc_backend.Controllers
                     Email = user.Email,
                     Password = hashPass,
                     FullName = user.FullName,
-                    RoleId = 2
+                    RoleId = 2,
+                    Status = "Active"
                 };
                 _db.Users.Add(newUser);
                 _db.SaveChanges();
@@ -132,7 +158,8 @@ namespace dsc_backend.Controllers
                     UserID = newUser.UserId,
                     FullName = user.FullName,
                     Email = newUser.Email,
-                    Roleid = newUser.RoleId
+                    Roleid = newUser.RoleId,
+                    Status = newUser.Status
                 };
                 return Ok(registerSuccess);
             }

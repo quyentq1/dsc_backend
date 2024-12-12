@@ -5,7 +5,7 @@ namespace dsc_backend.Models;
 
 public partial class Team
 {
-    public int TeamId { get; set; }
+    public int? TeamId { get; set; }
 
     public int? TournamentId { get; set; }
 
