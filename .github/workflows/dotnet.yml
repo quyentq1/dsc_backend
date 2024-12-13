@@ -23,8 +23,8 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore ./dsc-backend.sln
     - name: Build
-      run: dotnet build ./dsc-backend.sln --configuration Realease --no-restore
+      run: dotnet build ./dsc-backend.sln --configuration Release --no-restore
     - name: Publish
-      run: dotnet publish ./dsc-backend.sln --configuration Realease --no-build
+      run: dotnet publish ./dsc-backend.sln --configuration Release --no-build
     - name: Test
       run: dotnet test --no-build --verbosity normal
