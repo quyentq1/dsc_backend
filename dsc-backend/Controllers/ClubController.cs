@@ -764,6 +764,25 @@ namespace dsc_backend.Controllers
                 return StatusCode(500, new { Success = false, Message = "Đã xảy ra lỗi khi dừng hoạt động câu lạc bộ" });
             }
         }
+        [HttpGet("getAllClubNames")]
+        public async Task<IActionResult> getAllClubNames()
+        {
+            try
+            {
+                // Query the database to get all activity names
+                List<string> ClubNames = await _db.Clubs
+                    .Select(a => a.ClubName)
+                    .ToListAsync();
+
+                // Return the list of names as JSON
+                return Ok(ClubNames);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
 
     }
 }

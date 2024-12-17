@@ -672,6 +672,55 @@ namespace dsc_backend.Controllers
 
             return Ok(members);
         }
+        
+        [HttpGet("getAllTournamentNames")]
+        public async Task<IActionResult> getAllTournamentNames()
+        {
+            try
+            {
+                // Query the database to get all activity names
+                List<string> TournamentsNames = await _db.Tournaments
+                    .Select(a => a.Name)
+                    .ToListAsync();
+
+                // Return the list of names as JSON
+                return Ok(TournamentsNames);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
+        [HttpPost("PaymentforTournament")]
+        public async Task<IActionResult> PaymentforTournament()
+        {
+            try
+            {
+                // Lấy Admin hiện tại
+                var existingFundAdmin = await _db.Admins.FirstOrDefaultAsync();
+
+                if (existingFundAdmin == null)
+                {
+                    return NotFound("Admin not found.");
+                }
+
+                // Cộng 200,000 vào trường Fund của Admin
+                existingFundAdmin.Fund += 200000;
+
+                // Lưu lại thay đổi vào cơ sở dữ liệu
+                _db.Admins.Update(existingFundAdmin);
+                await _db.SaveChangesAsync();
+
+                // Trả về danh sách tên giải đấu hoặc các dữ liệu bạn muốn
+                return Ok(new { Fund = existingFundAdmin.Fund, Message = "Payment successful, Fund updated." });
+            }
+            catch (Exception ex)
+            {
+                // Xử lý lỗi nếu có
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
 
 
     }

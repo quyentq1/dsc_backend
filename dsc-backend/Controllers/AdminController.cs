@@ -119,6 +119,46 @@ namespace dsc_backend.Controllers
 
             return Ok(new { Success = true, Data = customers });
         }
+        [HttpGet("searchClub")]
+        public async Task<IActionResult> searchClub(string q)
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                return BadRequest(new { Success = false, Message = "Search query is required." });
+            }
+
+            // Search customers by full name (case insensitive)
+            var club = await _db.Clubs
+                .Where(c => EF.Functions.Like(c.ClubName, $"%{q}%")) // Use EF.Functions.Like for case-insensitive search
+                .ToListAsync();
+
+            if (club == null || club.Count == 0)
+            {
+                return NotFound(new { Success = false, Message = "No club found." });
+            }
+
+            return Ok(new { Success = true, Data = club });
+        }
+        [HttpGet("searchTournament")]
+        public async Task<IActionResult> searchTournament(string q)
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                return BadRequest(new { Success = false, Message = "Search query is required." });
+            }
+
+            // Search customers by full name (case insensitive)
+            var tournaments = await _db.Tournaments
+                .Where(c => EF.Functions.Like(c.Name, $"%{q}%")) // Use EF.Functions.Like for case-insensitive search
+                .ToListAsync();
+
+            if (tournaments == null || tournaments.Count == 0)
+            {
+                return NotFound(new { Success = false, Message = "No tournaments found." });
+            }
+
+            return Ok(new { Success = true, Data = tournaments });
+        }
         [HttpGet("getClubList")]
         public async Task<IActionResult> getClubList()
         {

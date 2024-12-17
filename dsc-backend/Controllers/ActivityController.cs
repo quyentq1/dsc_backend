@@ -767,6 +767,25 @@ namespace dsc_backend.Controllers
 
             return Ok(result);
         }
+        [HttpGet("getNameActivity")]
+        public async Task<IActionResult> getNameActivity()
+        {
+            try
+            {
+                // Query the database to get all activity names
+                List<string> activityNames = await _db.Activities
+                    .Select(a => a.ActivityName)
+                    .ToListAsync();
 
+                // Return the list of names as JSON
+                return Ok(activityNames);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+
+        }
     }
 }
