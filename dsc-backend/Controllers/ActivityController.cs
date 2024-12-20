@@ -1,4 +1,6 @@
-﻿using dsc_backend.DAO;
+﻿using CloudinaryDotNet.Actions;
+using CloudinaryDotNet;
+using dsc_backend.DAO;
 using dsc_backend.Helper;
 using dsc_backend.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +42,8 @@ namespace dsc_backend.Controllers
                     a.StartDate,
                     a.Location,
                     a.NumberOfTeams,
-                    LevelName = a.Level.LevelName
+                    LevelName = a.Level.LevelName,
+                    a.Avatar
                 })
                 .ToListAsync();
 
@@ -67,6 +70,7 @@ namespace dsc_backend.Controllers
                     a.ClubId,
                     LevelName = a.Level.LevelName,
                     NumberOfParticipants = _db.UserActivityClubs.Count(u => u.ActivityId == a.ActivityClubId && u.Role == "Player"),
+                    a.Avatar
                 })
                 .ToListAsync();
 
@@ -119,7 +123,8 @@ namespace dsc_backend.Controllers
                     ua.Activity.StartDate,                // Lấy StartDate từ Activity
                     ua.Activity.Location,                 // Lấy Location từ Activity
                     ua.Activity.NumberOfTeams,            // Lấy NumberOfTeams từ Activity
-                    LevelName = ua.Activity.Level.LevelName // Lấy tên của Level từ Activity
+                    LevelName = ua.Activity.Level.LevelName, // Lấy tên của Level từ Activity
+                    Avatar = ua.Activity.Avatar
                 })
                 .ToListAsync();
 
@@ -131,8 +136,37 @@ namespace dsc_backend.Controllers
             return Ok(activities);
         }
 
+        private async Task<ImageUploadResult> UploadToCloudinary(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("File không hợp lệ");
+
+            var account = new Account(
+                "di6k4wpxl",
+                "791189184743261",
+                "xQRBuHQLrCQokqwVU777RrIyLDQ");
+
+            var cloudinary = new Cloudinary(account);
+
+            try
+            {
+                using (var stream = file.OpenReadStream())
+                {
+                    var uploadParams = new ImageUploadParams
+                    {
+                        File = new FileDescription(file.FileName, stream)
+                    };
+
+                    return await cloudinary.UploadAsync(uploadParams);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("Lỗi khi upload ảnh lên Cloudinary", ex);
+            }
+        }
         [HttpPost("createActivityClub")]
-        public async Task<IActionResult> createActivity([FromBody] CreateActivityClubDAO activitys)
+        public async Task<IActionResult> createActivity([FromForm] CreateActivityClubDAO activitys, [FromForm] IFormFile file)
         {
             if (activitys != null)
             {
@@ -148,7 +182,28 @@ namespace dsc_backend.Controllers
                     NumberOfTeams = activitys?.playerCount,
                     Expense = activitys?.amount,
                 };
-                _db.ActivitiesClubs.Add(AddActivity);
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            AddActivity.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
+                _db.ActivitiesClubs.AddAsync(AddActivity);
                 _db.SaveChanges();
                 var activityId = AddActivity.ActivityClubId;
                 var ActivityUser = new UserActivityClub
@@ -190,7 +245,7 @@ namespace dsc_backend.Controllers
 
         }
         [HttpPost("createActivity")]
-        public async Task<IActionResult> createActivityClub([FromBody] CreateActivityDAO activitys)
+        public async Task<IActionResult> createActivityClub([FromForm] CreateActivityDAO activitys, [FromForm] IFormFile file)
         {
             if (activitys != null)
             {
@@ -206,6 +261,27 @@ namespace dsc_backend.Controllers
                     NumberOfTeams = activitys?.playerCount,
                     Expense = activitys?.amount,
                 };
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            AddActivity.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
                 _db.Activities.Add(AddActivity);
                 _db.SaveChanges();
                 var activityId = AddActivity.ActivityId;
@@ -246,7 +322,7 @@ namespace dsc_backend.Controllers
 
         }
         [HttpPost("uppdateActivity")]
-        public async Task<IActionResult> uppdateActivity([FromBody] CreateActivityDAO activitys)
+        public async Task<IActionResult> uppdateActivity([FromForm] CreateActivityDAO activitys, IFormFile file = null)
         {
             if (activitys != null)
             {
@@ -264,6 +340,27 @@ namespace dsc_backend.Controllers
                 ActivityExist.NumberOfTeams = (int?)activitys.playerCount ?? ActivityExist.NumberOfTeams;
                 ActivityExist.Expense = activitys.amount ?? ActivityExist.Expense;
                 ActivityExist.Description = activitys.description ?? ActivityExist.Description;
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            ActivityExist.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
                 _db.Activities.Update(ActivityExist);
                 await _db.SaveChangesAsync();
                 var updatedactivity = new
@@ -294,7 +391,7 @@ namespace dsc_backend.Controllers
 
         }
         [HttpPost("uppdateActivityClub")]
-        public async Task<IActionResult> uppdateActivityClub([FromBody] CreateActivityDAO activitys)
+        public async Task<IActionResult> uppdateActivityClub([FromForm] CreateActivityDAO activitys, IFormFile file = null)
         {
             if (activitys != null)
             {
@@ -312,6 +409,27 @@ namespace dsc_backend.Controllers
                 ActivityExist.NumberOfTeams = (int?)activitys.playerCount ?? ActivityExist.NumberOfTeams;
                 ActivityExist.Expense = activitys.amount ?? ActivityExist.Expense;
                 ActivityExist.Description = activitys.description ?? ActivityExist.Description;
+                if (file != null && file.Length > 0)
+                {
+                    try
+                    {
+                        var uploadResult = await UploadToCloudinary(file);
+
+                        if (uploadResult != null)
+                        {
+                            ActivityExist.Avatar = uploadResult.SecureUrl.ToString();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, new
+                        {
+                            Success = false,
+                            Message = "Lỗi khi upload ảnh",
+                            Error = ex.Message
+                        });
+                    }
+                }
                 _db.ActivitiesClubs.Update(ActivityExist);
                 await _db.SaveChangesAsync();
                 var updatedactivity = new
@@ -346,7 +464,7 @@ namespace dsc_backend.Controllers
         public async Task<IActionResult> requestJoinActivity([FromBody] CreateActivityDAO requestJoinActivity)
         {
             var requestExist = await _db.RequestJoinActivities.Where(x => x.ActivitiesId == requestJoinActivity.activityId && x.UserId == requestJoinActivity.userId).FirstOrDefaultAsync();
-            if(requestExist != null)
+            if (requestExist != null)
             {
                 var ListViewRequest = new
                 {
@@ -524,9 +642,9 @@ namespace dsc_backend.Controllers
                         {
                             ActivityId = activityId,
                             UserId = userId,
-                            JoinDate= DateTime.UtcNow,
+                            JoinDate = DateTime.UtcNow,
                             RoleInActivity = "Player"
-                            
+
                         };
 
                         await _db.UserActivities.AddAsync(activity);
@@ -605,7 +723,8 @@ namespace dsc_backend.Controllers
                     a.Description,
                     a.Expense,
                     // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
-                    LevelName = a.Level.LevelName
+                    LevelName = a.Level.LevelName,
+                    a.Avatar
                 })
                 .Where(x => x.ActivityId == activityId)
                 .ToListAsync();
@@ -634,7 +753,8 @@ namespace dsc_backend.Controllers
 
                     NumberOfParticipants = _db.UserActivityClubs.Count(u => u.ActivityId == a.ActivityClubId && u.Role == "Player"),
                     // Thêm các thuộc tính khác của Activity mà bạn muốn lấy
-                    LevelName = a.Level.LevelName
+                    LevelName = a.Level.LevelName,
+                    a.Avatar
                 })
                 .Where(x => x.ActivityClubId == activityclubId)
                 .ToListAsync();
@@ -786,6 +906,139 @@ namespace dsc_backend.Controllers
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
 
+        }
+        [HttpPost("CreateResults")]
+        public async Task<IActionResult> CreateResults([FromBody] ResultOfActivity result)
+        {
+            if (result == null)
+            {
+                return BadRequest("Dữ liệu không hợp lệ.");
+            }
+
+            var newResult = new ResultOfActivity
+            {
+                ActivityId = result.ActivityId,
+                Team1Score = result.Team1Score,
+                Team2Score = result.Team2Score
+            };
+
+            _db.ResultOfActivities.Add(newResult); // Thêm vào DbContext
+            await _db.SaveChangesAsync(); // Lưu thay đổi vào DB
+
+            return Ok(new
+            {
+                Message = "Thêm kết quả hoạt động thành công.",
+                Data = newResult
+            });
+        }
+        [HttpGet("GetResults/{activityId}")]
+        public async Task<IActionResult> GetResults(int activityId)
+        {
+            var result = await _db.ResultOfActivities
+                                       .FirstOrDefaultAsync(r => r.ActivityId == activityId);
+
+            if (result == null)
+            {
+                // Trả về một đối tượng mặc định nếu chưa có kết quả
+                return Ok(new
+                {
+                    ResultId = 0,
+                    ActivityId = activityId,
+                    Team1Score = 0,
+                    Team2Score = 0
+                });
+            }
+
+            return Ok(result);
+        }
+        [HttpGet("GetComments/{activityId}")]
+        public async Task<IActionResult> GetComments(int activityId)
+        {
+            var comments = await _db.Comments
+                                    .Where(c => c.ActivityId == activityId)
+                                    .Include(c => c.User) // Join với bảng User để lấy FullName
+                                    .Select(c => new
+                                    {
+                                        CommentID = c.CommentId,
+                                        FullName = c.User.FullName, // Lấy FullName từ bảng User
+                                        CommentText = c.Comment1 // Lấy Text bình luận
+                                    })
+                                    .ToListAsync();
+
+            if (comments == null || !comments.Any())
+            {
+                return Ok(new { message = "Không có bình luận nào cho hoạt động này." });
+            }
+
+            return Ok(comments); // Trả về danh sách các bình luận với FullName, CommentID và CommentText
+        }
+
+        [HttpPut("UpdateResults")]
+        public async Task<IActionResult> UpdateResult([FromBody] ResultOfActivity updatedResult)
+        {
+            if (updatedResult == null)
+            {
+                return BadRequest("Dữ liệu không hợp lệ.");
+            }
+
+            if (updatedResult.ResultId == 0)
+            {
+                // Tạo mới kết quả nếu ResultId là 0
+                var newResult = new ResultOfActivity
+                {
+                    ActivityId = updatedResult.ActivityId,
+                    Team1Score = updatedResult.Team1Score,
+                    Team2Score = updatedResult.Team2Score
+                };
+
+                _db.ResultOfActivities.Add(newResult);
+                await _db.SaveChangesAsync();
+
+                return Ok(new { Message = "Tạo kết quả thành công!", Data = newResult });
+            }
+
+            // Cập nhật kết quả hiện có
+            var existingResult = await _db.ResultOfActivities.FindAsync(updatedResult.ResultId);
+            if (existingResult == null)
+            {
+                return NotFound("Kết quả không tồn tại.");
+            }
+
+            existingResult.Team1Score = updatedResult.Team1Score;
+            existingResult.Team2Score = updatedResult.Team2Score;
+
+            _db.ResultOfActivities.Update(existingResult);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { Message = "Cập nhật kết quả thành công!", Data = existingResult });
+        }
+        [HttpPut("AddComment")]
+        public async Task<IActionResult> AddComment([FromBody] Comment comment)
+        {
+            if (comment == null)
+            {
+                return BadRequest("Dữ liệu không hợp lệ.");
+            }
+
+            // Lưu vào cơ sở dữ liệu
+            _db.Comments.Add(comment);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { Message = "Bình luận đã được thêm thành công!" });
+        }
+        [HttpDelete("DeleteComment/{commentId}")]
+        public async Task<IActionResult> DeleteComment(int commentId)
+        {
+            var comment = await _db.Comments.FindAsync(commentId);
+            if (comment == null)
+            {
+                return NotFound(new { message = "Bình luận không tồn tại" });
+            }
+
+            _db.Comments.Remove(comment);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { message = "Bình luận đã được xóa thành công!" });
         }
     }
 }
