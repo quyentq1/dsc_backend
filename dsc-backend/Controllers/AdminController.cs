@@ -68,22 +68,44 @@ namespace dsc_backend.Controllers
         [HttpPost("updateinforcustomer")]
         public async Task<IActionResult> UpdateInforcustomer([FromBody] User user)
         {
+            // Kiểm tra người dùng đầu vào
+            if (user == null || user.UserId == 0)
+            {
+                return BadRequest(new { message = "Thông tin người dùng không hợp lệ." });
+            }
+
+            // Tìm kiếm người dùng trong cơ sở dữ liệu
             var existingUser = await _db.Users.FirstOrDefaultAsync(x => x.UserId == user.UserId);
 
             if (existingUser == null)
             {
-                return NotFound("Người Dùng Không Tồn Tại.");
+                return NotFound(new { message = "Người dùng không tồn tại." });
             }
-            existingUser.FullName = user.FullName ?? existingUser.FullName;
-            existingUser.Address = user.Address ?? existingUser.Address;
-            existingUser.Phone = user.Phone ?? existingUser.Phone;
+
+            // Cập nhật các trường với giá trị null hoặc chuỗi rỗng
+            existingUser.FullName = string.IsNullOrWhiteSpace(user.FullName) ? existingUser.FullName : user.FullName;
+            existingUser.Address = string.IsNullOrWhiteSpace(user.Address) ? existingUser.Address : user.Address;
+            existingUser.Phone = string.IsNullOrWhiteSpace(user.Phone) ? existingUser.Phone : user.Phone;
             existingUser.Age = user.Age ?? existingUser.Age;
-            existingUser.Weight = user.Weight ?? existingUser.Weight;
-            existingUser.Avatar = user.Avatar ?? existingUser.Avatar;
-            existingUser.Height = user.Height ?? existingUser.Height;
-            existingUser.Status = user.Status ?? existingUser.Status;
+
+            if (user.Weight.HasValue && user.Weight > 0)
+            {
+                existingUser.Weight = user.Weight;
+            }
+
+            if (user.Height.HasValue && user.Height > 0)
+            {
+                existingUser.Height = user.Height;
+            }
+
+            existingUser.Avatar = string.IsNullOrWhiteSpace(user.Avatar) ? existingUser.Avatar : user.Avatar;
+            existingUser.Status = string.IsNullOrWhiteSpace(user.Status) ? existingUser.Status : user.Status;
+
+            // Cập nhật dữ liệu vào database
             _db.Users.Update(existingUser);
             await _db.SaveChangesAsync();
+
+            // Chuẩn bị dữ liệu trả về
             var updatedUserInfo = new
             {
                 UserId = existingUser.UserId,
@@ -93,12 +115,15 @@ namespace dsc_backend.Controllers
                 Email = existingUser.Email,
                 Age = existingUser.Age,
                 Weight = existingUser.Weight,
-                Avatar = existingUser.Avatar,
                 Height = existingUser.Height,
+                Avatar = existingUser.Avatar,
+                Status = existingUser.Status
             };
 
             return Ok(updatedUserInfo);
         }
+
+
         [HttpGet("searchCustomer")]
         public async Task<IActionResult> SearchCustomer(string q)
         {

@@ -97,7 +97,8 @@ namespace dsc_backend.Controllers
                     a.StartDate,
                     a.Location,
                     a.NumberOfTeams,
-                    LevelName = a.Level.LevelName
+                    LevelName = a.Level.LevelName,
+                    a.Avatar
                 })
                 .ToListAsync();
 
@@ -586,7 +587,8 @@ namespace dsc_backend.Controllers
                         x.CreateDate,
                         x.Status,
                         x.UserId,
-                        UserFullName = x.User.FullName // Lấy FullName từ bảng User
+                        UserFullName = x.User.FullName, // Lấy FullName từ bảng User
+                        Avatar = x.User.Avatar
                     })
                     .ToListAsync();
 
@@ -796,19 +798,22 @@ namespace dsc_backend.Controllers
                 NumberOfTeams = firstActivity.NumberOfTeams,
                 Description = firstActivity.Description,
                 Expense = firstActivity.Expense,
-                LevelName = firstActivity.Level?.LevelName // Kiểm tra null cho Level
+                LevelName = firstActivity.Level?.LevelName, // Kiểm tra null cho Level
+                Avatar = firstActivity.Avatar // Lấy Avatar của Activity
             };
+
             var userIds = userActivities.Select(ua => ua.UserId).ToList();
             var memberInfo = await _db.UserSports
                 .Where(us => userIds.Contains(us.UserId))
                 .Include(us => us.Level) // Kết nối với Level
+                .Include(us => us.User)  // Kết nối với bảng User để lấy thông tin Avatar của User
                 .ToListAsync(); // Chuyển sang danh sách
 
             // Tạo danh sách memberInfo với RoleActivity
             var resultMemberInfo = memberInfo.Select(us => new
             {
                 UserId = us.UserId,
-                AvatarUser = us.User.Avatar,
+                AvatarUser = us.User.Avatar,  // Lấy Avatar của User
                 FullName = us.User.FullName,
                 RoleActivity = userActivities.FirstOrDefault(ua => ua.UserId == us.UserId)?.RoleInActivity,
                 LevelName = us.Level.LevelName
@@ -1020,12 +1025,30 @@ namespace dsc_backend.Controllers
                 return BadRequest("Dữ liệu không hợp lệ.");
             }
 
-            // Lưu vào cơ sở dữ liệu
+            // Lưu bình luận vào cơ sở dữ liệu
             _db.Comments.Add(comment);
             await _db.SaveChangesAsync();
 
-            return Ok(new { Message = "Bình luận đã được thêm thành công!" });
+            // Lấy thông tin người dùng từ bảng User
+            var user = await _db.Users
+                                 .Where(u => u.UserId == comment.UserId)
+                                 .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                return NotFound("Không tìm thấy người dùng.");
+            }
+
+            // Trả về thông tin bình luận cùng với thông tin người dùng
+            return Ok(new
+            {
+                commentID = comment.CommentId,
+                fullName = user.FullName,      // Lấy FullName từ bảng User
+                commentText = comment.Comment1
+            });
         }
+
+
         [HttpDelete("DeleteComment/{commentId}")]
         public async Task<IActionResult> DeleteComment(int commentId)
         {
