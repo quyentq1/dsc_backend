@@ -117,7 +117,8 @@ namespace dsc_backend.Controllers
                     a.Location,
                     a.StartDate,
                     a.EndDate,
-                    a.Avatar
+                    a.Avatar,
+                    a.TournamentType
                 })
                 .ToListAsync();
 
@@ -249,6 +250,7 @@ namespace dsc_backend.Controllers
                     MemberOfTeams = tournaments.teamSize,
                     LimitRegister = tournaments.RegistrationDeadline,
                     UserId = tournaments.UserId,
+                    TournamentType = tournaments.TournamentType
                 };
 
                 // Xử lý upload ảnh nếu có file

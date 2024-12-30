@@ -33,6 +33,8 @@ namespace dsc_backend.DAO
 
             public string? location { get; set; }
 
+            public string? TournamentType { get; set; }
+
 
         }
 }

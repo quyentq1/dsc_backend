@@ -468,6 +468,7 @@ public partial class DscContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.StartDate).HasColumnType("datetime");
             entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.TournamentType).HasMaxLength(25);
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
             entity.HasOne(d => d.Level).WithMany(p => p.Tournaments)
