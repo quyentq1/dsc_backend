@@ -149,7 +149,8 @@ namespace dsc_backend.Controllers
                     a.LevelId,
                     LevelName = a.Level.LevelName,
                     a.Avatar,
-                    NumberOfRegisteredTeams = _db.Teams.Count(t => t.TournamentId == a.TournamentId) // Đếm số team đã tham gia
+                    NumberOfRegisteredTeams = _db.Teams.Count(t => t.TournamentId == a.TournamentId), // Đếm số team đã tham gia
+                    a.TournamentType
                 })
                 .Where(x => x.TournamentId == tournamentId)
                 .ToListAsync();
