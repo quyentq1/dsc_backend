@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace dsc_backend.Controllers
 {
@@ -559,7 +560,9 @@ namespace dsc_backend.Controllers
                                 {
                                     MatchId = match.MatchId,
                                     ScoreTeam1 = matchDto.Score1,
-                                    ScoreTeam2 = matchDto.Score2
+                                    ScoreTeam2 = matchDto.Score2,
+                                    PenaltyTeam1 = matchDto.Penalty1,
+                                    PenaltyTeam2 =  matchDto.Penalty2
                                 };
                                 _db.Results.Add(result);
                             }
@@ -567,6 +570,8 @@ namespace dsc_backend.Controllers
                             {
                                 result.ScoreTeam1 = matchDto.Score1;
                                 result.ScoreTeam2 = matchDto.Score2;
+                                result.PenaltyTeam1 = matchDto.Penalty1;
+                                result.PenaltyTeam2 = matchDto.Penalty2;
                                 _db.Results.Update(result);
                             }
                         }
@@ -609,6 +614,8 @@ namespace dsc_backend.Controllers
                     Team2Name = m.Team2?.TeamName, // Tên đội 2 (Nếu không có thì trả về TBD)
                     Score1 = m.Results.FirstOrDefault()?.ScoreTeam1, // Điểm đội 1
                     Score2 = m.Results.FirstOrDefault()?.ScoreTeam2, // Điểm đội 2
+                    Penalty1 = m.Results.FirstOrDefault()?.PenaltyTeam1,
+                    Penalty2 = m.Results.FirstOrDefault()?.PenaltyTeam2,
                     Time = m.Time,           // Thêm Time
                     Location = m.Location
                 }).ToList();

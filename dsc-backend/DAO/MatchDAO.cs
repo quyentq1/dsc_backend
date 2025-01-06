@@ -7,6 +7,8 @@
         public int? Team2Id { get; set; }
         public int? Score1 { get; set; }
         public int? Score2 { get; set; }
+        public int? Penalty1 { get; set; }
+        public int? Penalty2 { get; set; }
 
         public string? Location { get; set; }
 

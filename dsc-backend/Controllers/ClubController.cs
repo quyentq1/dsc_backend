@@ -592,6 +592,7 @@ namespace dsc_backend.Controllers
                 {
                     Success = true,
                     UserId = clubs.userId,
+                    ClubId = AddClub.ClubId,
                     LevelId = AddClub.LevelId,
                     ClubName = AddClub.ClubName,
                     CreateDate = AddClub.CreateDate,
@@ -764,6 +765,56 @@ namespace dsc_backend.Controllers
                 return StatusCode(500, new { Success = false, Message = "Đã xảy ra lỗi khi dừng hoạt động câu lạc bộ" });
             }
         }
+        [HttpPost("expiredClub")]
+        public async Task<IActionResult> expiredClub([FromBody] StopClubRequest request)
+        {
+            if (request == null || request.ClubId <= 0)
+            {
+                return BadRequest(new { Success = false, Message = "Invalid Club ID" });
+            }
+
+            try
+            {
+                var existingFundAdmin = await _db.Admins.FirstOrDefaultAsync();
+
+                if (existingFundAdmin == null)
+                {
+                    return NotFound("Admin not found.");
+                }
+
+                // Cộng 200,000 vào trường Fund của Admin
+                existingFundAdmin.Fund += 150000;
+
+                // Lưu lại thay đổi vào cơ sở dữ liệu
+                _db.Admins.Update(existingFundAdmin);
+                await _db.SaveChangesAsync();
+                // Tìm câu lạc bộ theo ClubId
+                var club = await _db.Clubs.FirstOrDefaultAsync(c => c.ClubId == request.ClubId);
+                if (club == null)
+                {
+                    return NotFound(new { Success = false, Message = "Câu lạc bộ không tồn tại" });
+                }
+
+                // Cập nhật trạng thái câu lạc bộ thành "Active"
+                club.Status = "Active";
+
+                // Cập nhật createDate thành ngày hiện tại + 30 ngày
+                club.CreateDate = DateTime.UtcNow;
+
+                // Lưu thay đổi vào database
+                await _db.SaveChangesAsync();
+
+
+                return Ok(new { Success = true, Message = "Câu lạc bộ đã được gia hạn thành công", NewExpirationDate = club.CreateDate });
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nếu có
+                _logger.LogError(ex, "Lỗi khi gia hạn câu lạc bộ");
+
+                return StatusCode(500, new { Success = false, Message = "Đã xảy ra lỗi khi gia hạn câu lạc bộ" });
+            }
+        }
         [HttpGet("getAllClubNames")]
         public async Task<IActionResult> getAllClubNames()
         {
@@ -783,6 +834,89 @@ namespace dsc_backend.Controllers
                 return StatusCode(500, "Internal server error: " + ex.Message);
             }
         }
+        [HttpPost("updateStatusClub/{clubId}")]
+        public async Task<IActionResult> updateStatusClub(int clubId)
+        {
+            try
+            {
+                var club = await _db.Clubs.FindAsync(clubId);
+                if (club == null)
+                    return NotFound(new { success = false, message = "Không tìm thấy câu lạc bộ" });
 
+                club.Status = "Expired";
+                await _db.SaveChangesAsync();
+
+                return Ok(new { success = true, message = "Cập nhật trạng thái thành công" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+        [HttpPost("deleteClub/{clubId}")]
+        public async Task<IActionResult> deleteClub(int clubId)
+        {
+            using var transaction = await _db.Database.BeginTransactionAsync();
+
+            try
+            {
+                var club = await _db.Clubs.Where(x => x.ClubId == clubId).FirstOrDefaultAsync();
+                if (club == null)
+                {
+                    return NotFound(new { message = "Câu lạc bộ không tồn tại." });
+                }
+
+                // Xóa tất cả các bản ghi trong UserClub có ClubId tương ứng
+                var userClubsToDelete = await _db.UserClubs.Where(uc => uc.ClubId == clubId).ToListAsync();
+                _db.UserClubs.RemoveRange(userClubsToDelete);
+
+                // Xóa câu lạc bộ
+                _db.Clubs.Remove(club);
+
+                // Lưu thay đổi vào cơ sở dữ liệu
+                await _db.SaveChangesAsync();
+
+                // Commit transaction
+                await transaction.CommitAsync();
+
+                // Trả về thông báo thành công
+                return Ok(new { message = "Câu lạc bộ và tất cả liên kết người dùng đã được xóa thành công.", success = true });
+            }
+            catch (Exception ex)
+            {
+                // Nếu có lỗi, rollback transaction
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Đã xảy ra lỗi khi xóa câu lạc bộ.", error = ex.Message });
+            }
+        }
+        [HttpPost("PaymentforClub")]
+        public async Task<IActionResult> PaymentforClub()
+        {
+            try
+            {
+                // Lấy Admin hiện tại
+                var existingFundAdmin = await _db.Admins.FirstOrDefaultAsync();
+
+                if (existingFundAdmin == null)
+                {
+                    return NotFound("Admin not found.");
+                }
+
+                // Cộng 200,000 vào trường Fund của Admin
+                existingFundAdmin.Fund += 200000;
+
+                // Lưu lại thay đổi vào cơ sở dữ liệu
+                _db.Admins.Update(existingFundAdmin);
+                await _db.SaveChangesAsync();
+
+                // Trả về danh sách tên giải đấu hoặc các dữ liệu bạn muốn
+                return Ok(new { Fund = existingFundAdmin.Fund, Message = "Payment successful, Fund updated." });
+            }
+            catch (Exception ex)
+            {
+                // Xử lý lỗi nếu có
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
     }
 }

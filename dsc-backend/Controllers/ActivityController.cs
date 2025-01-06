@@ -858,7 +858,8 @@ namespace dsc_backend.Controllers
                 NumberOfTeams = firstActivity.NumberOfTeams,
                 Description = firstActivity.Description,
                 Expense = firstActivity.Expense,
-                LevelName = firstActivity.Level?.LevelName // Kiểm tra null cho Level
+                LevelName = firstActivity.Level?.LevelName, // Kiểm tra null cho Level
+                Avatar = firstActivity.Avatar
             };
 
             // Danh sách UserId từ UserActivityClubs
