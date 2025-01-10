@@ -77,7 +77,7 @@ namespace dsc_backend.Controllers
         {
             // Lấy danh sách Club mà user đã tham gia với role là "Player" và có Status là "Active"
             var listClub = await _db.UserClubs
-                .Where(uc => uc.UserId == userId && uc.Role == "Player" && uc.Club.Status == "Active") // Thêm điều kiện Status
+                .Where(uc => uc.UserId == userId && uc.Role == "Player") // Thêm điều kiện Status
                 .Select(uc => uc.Club) // Truy cập vào Club thông qua quan hệ navigation
                 .OrderByDescending(c => c.CreateDate)
                 .Select(c => new
@@ -87,7 +87,8 @@ namespace dsc_backend.Controllers
                     LevelName = c.Level.LevelName,
                     c.Status,
                     UserCount = _db.UserClubs.Count(uc => uc.ClubId == c.ClubId), // Đếm số thành viên trong Club
-                    c.Avatar
+                    c.Avatar,
+                    c.CreateDate
                 })
                 .ToListAsync();
 

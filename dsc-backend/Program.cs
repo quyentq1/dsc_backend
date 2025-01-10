@@ -14,11 +14,17 @@ builder.Services.AddAuthentication(options =>
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
 })
-    .AddCookie()
+    .AddCookie(options =>
+    {
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+    })
     .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
     {
         options.ClientId = builder.Configuration.GetSection("GoogleKeys:ClientId").Value;
         options.ClientSecret = builder.Configuration.GetSection("GoogleKeys:ClientSecret").Value;
+        options.CallbackPath = "/Authen/signin-google";
     });
 builder.Services.AddDbContext<DscContext>(options =>
     options.UseSqlServer(

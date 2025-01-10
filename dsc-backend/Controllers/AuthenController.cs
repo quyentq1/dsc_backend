@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Text.Encodings.Web;
 
 namespace dsc_backend.Controllers
 {
@@ -102,14 +104,10 @@ namespace dsc_backend.Controllers
             });
         }
 
-
-
-
-
         [HttpGet("login-google")]
         public IActionResult LoginGoogle()
         {
-            var props = new AuthenticationProperties { RedirectUri = "Authen/signin-google" };
+            var props = new AuthenticationProperties { RedirectUri = "/Authen/signin-google" };
             return Challenge(props, GoogleDefaults.AuthenticationScheme);
         }
         [HttpGet("signin-google")]
