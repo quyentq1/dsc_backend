@@ -25,6 +25,8 @@ public partial class DscContext : DbContext
 
     public virtual DbSet<Comment> Comments { get; set; }
 
+    public virtual DbSet<CommentClub> CommentClubs { get; set; }
+
     public virtual DbSet<Fee> Fees { get; set; }
 
     public virtual DbSet<Level> Levels { get; set; }
@@ -187,6 +189,25 @@ public partial class DscContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.Comments)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_Comment_User");
+        });
+
+        modelBuilder.Entity<CommentClub>(entity =>
+        {
+            entity.HasKey(e => e.CommentClubId).HasName("PK__CommentC__A6C6B7F1DAE90B1D");
+
+            entity.ToTable("CommentClub");
+
+            entity.Property(e => e.CommentClubId).HasColumnName("CommentClubID");
+            entity.Property(e => e.ActivityClubId).HasColumnName("ActivityClubID");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+
+            entity.HasOne(d => d.ActivityClub).WithMany(p => p.CommentClubs)
+                .HasForeignKey(d => d.ActivityClubId)
+                .HasConstraintName("FK_CommentClub_ActivityClub");
+
+            entity.HasOne(d => d.User).WithMany(p => p.CommentClubs)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_CommentClub_User");
         });
 
         modelBuilder.Entity<Fee>(entity =>

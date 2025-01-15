@@ -27,6 +27,8 @@ public partial class ActivitiesClub
 
     public virtual Club? Club { get; set; }
 
+    public virtual ICollection<CommentClub> CommentClubs { get; set; } = new List<CommentClub>();
+
     public virtual Level? Level { get; set; }
 
     public virtual ICollection<ResultOfActivitiesClub> ResultOfActivitiesClubs { get; set; } = new List<ResultOfActivitiesClub>();

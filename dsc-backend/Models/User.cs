@@ -35,6 +35,8 @@ public partial class User
 
     public virtual ICollection<Activity> Activities { get; set; } = new List<Activity>();
 
+    public virtual ICollection<CommentClub> CommentClubs { get; set; } = new List<CommentClub>();
+
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();

@@ -1064,5 +1064,136 @@ namespace dsc_backend.Controllers
 
             return Ok(new { message = "Bình luận đã được xóa thành công!" });
         }
+
+
+        // Comment in Activity Club
+
+        [HttpGet("GetResultsClub/{activityClubId}")]
+        public async Task<IActionResult> GetResultsClub(int activityClubId)
+        {
+            var result = await _db.ResultOfActivitiesClubs
+                                       .FirstOrDefaultAsync(r => r.ActivityClubId == activityClubId);
+
+            if (result == null)
+            {
+                // Trả về một đối tượng mặc định nếu chưa có kết quả
+                return Ok(new
+                {
+                    ResultId = 0,
+                    ActivityClubId = activityClubId,
+                    Team1Score = 0,
+                    Team2Score = 0
+                });
+            }
+
+            return Ok(result);
+        }
+        [HttpGet("GetCommentsClub/{activityClubId}")]
+        public async Task<IActionResult> GetCommentsClub(int activityClubId)
+        {
+            var comments = await _db.CommentClubs
+                                    .Where(c => c.ActivityClubId == activityClubId)
+                                    .Include(c => c.User) // Join với bảng User để lấy FullName
+                                    .Select(c => new
+                                    {
+                                        CommentID = c.CommentClubId,
+                                        FullName = c.User.FullName, // Lấy FullName từ bảng User
+                                        CommentText = c.Comment // Lấy Text bình luận
+                                    })
+                                    .ToListAsync();
+
+            if (comments == null || !comments.Any())
+            {
+                return Ok(new { message = "Không có bình luận nào cho hoạt động này." });
+            }
+
+            return Ok(comments); // Trả về danh sách các bình luận với FullName, CommentID và CommentText
+        }
+        [HttpPut("AddCommentClub")]
+        public async Task<IActionResult> AddCommentClub([FromBody] CommentClub comment)
+        {
+            if (comment == null)
+            {
+                return BadRequest("Dữ liệu không hợp lệ.");
+            }
+
+            // Lưu bình luận vào cơ sở dữ liệu
+            _db.CommentClubs.Add(comment);
+            await _db.SaveChangesAsync();
+
+            // Lấy thông tin người dùng từ bảng User
+            var user = await _db.Users
+                                 .Where(u => u.UserId == comment.UserId)
+                                 .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                return NotFound("Không tìm thấy người dùng.");
+            }
+
+            // Trả về thông tin bình luận cùng với thông tin người dùng
+            return Ok(new
+            {
+                commentID = comment.CommentClubId,
+                fullName = user.FullName,      // Lấy FullName từ bảng User
+                commentText = comment.Comment
+            });
+        }
+
+
+        [HttpDelete("DeleteCommentClub/{commentClubId}")]
+        public async Task<IActionResult> DeleteCommentClub(int commentClubId)
+        {
+            var comment = await _db.CommentClubs.FindAsync(commentClubId);
+            if (comment == null)
+            {
+                return NotFound(new { message = "Bình luận không tồn tại" });
+            }
+
+            _db.CommentClubs.Remove(comment);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { message = "Bình luận đã được xóa thành công!" });
+        }
+        [HttpPut("UpdateResultsClub")]
+        public async Task<IActionResult> UpdateResultClub([FromBody] ResultOfActivitiesClub updatedResult)
+        {
+            if (updatedResult == null)
+            {
+                return BadRequest("Dữ liệu không hợp lệ.");
+            }
+
+            if (updatedResult.ResultId == 0)
+            {
+                // Tạo mới kết quả nếu ResultId là 0
+                var newResult = new ResultOfActivitiesClub
+                {
+                    ActivityClubId = updatedResult.ActivityClubId,
+                    Team1Score = updatedResult.Team1Score,
+                    Team2Score = updatedResult.Team2Score
+                };
+
+                _db.ResultOfActivitiesClubs.Add(newResult);
+                await _db.SaveChangesAsync();
+
+                return Ok(new { Message = "Tạo kết quả thành công!", Data = newResult });
+            }
+
+            // Cập nhật kết quả hiện có
+            var existingResult = await _db.ResultOfActivitiesClubs.FindAsync(updatedResult.ResultId);
+            if (existingResult == null)
+            {
+                return NotFound("Kết quả không tồn tại.");
+            }
+
+            existingResult.Team1Score = updatedResult.Team1Score;
+            existingResult.Team2Score = updatedResult.Team2Score;
+
+            _db.ResultOfActivitiesClubs.Update(existingResult);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { Message = "Cập nhật kết quả thành công!", Data = existingResult });
+        }
+
     }
 }
