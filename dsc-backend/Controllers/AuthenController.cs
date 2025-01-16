@@ -9,6 +9,8 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Text.Encodings.Web;
+using dsc_backend.DAO;
+using System;
 
 namespace dsc_backend.Controllers
 {
@@ -104,34 +106,63 @@ namespace dsc_backend.Controllers
             });
         }
 
-        [HttpGet("login-google")]
-        public IActionResult LoginGoogle()
+        [HttpPost("GoogleLogin")]
+        public async Task<IActionResult> GoogleLogin(GoogleLoginDAO google)
         {
-            var props = new AuthenticationProperties { RedirectUri = "/Authen/signin-google" };
-            return Challenge(props, GoogleDefaults.AuthenticationScheme);
-        }
-        [HttpGet("signin-google")]
-        public async Task<IActionResult> GoogleLogin()
-        {
-            var response = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            if (response.Principal == null) return BadRequest();
-
-            var name = response.Principal.FindFirstValue(ClaimTypes.Name);
-            var givenName = response.Principal.FindFirstValue(ClaimTypes.GivenName);
-            var email = response.Principal.FindFirstValue(ClaimTypes.Email);
-            var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == email);
-            if (user == null)
+            try
             {
-                var newUsers = new User
+                var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == google.email);
+                var Password = "Passmail";
+                var hashPass = _hashpass.MD5Hash(Password);
+                if (user == null)
                 {
-                    FullName = name,
-                    Email = email,
-                    RoleId = 2
+                    var newUsers = new User
+                    {
+                        FullName = google.name,
+                        Email = google.email,
+                        RoleId = 2,
+                        Status = "Active",
+                        Password = hashPass
+                    };
+
+                    _db.Users.Add(newUsers);
+                    await _db.SaveChangesAsync();
+
+                    // Query lại để lấy UserId của user vừa tạo
+                    var newUser = await _db.Users.FirstOrDefaultAsync(x => x.Email == google.email);
+
+                    var newUserResponse = new
+                    {
+                        userId = newUser.UserId,
+                        email = newUser.Email,
+                        fullName = newUser.FullName,
+                        roleId = newUser.RoleId,
+                        status = newUser.Status,
+                        message = "Đăng ký tài khoản thành công",
+                        success = true
+                    };
+
+                    return Ok(newUserResponse);
+                }
+
+                // Response cho user đã tồn tại
+                var existingUserResponse = new
+                {
+                    userId = user.UserId,
+                    email = user.Email,
+                    fullName = user.FullName,
+                    roleId = user.RoleId,
+                    status = user.Status,
+                    message = "Đăng nhập thành công",
+                    success = true
                 };
-                _db.Users.Add(newUsers);
-                _db.SaveChanges();
+
+                return Ok(existingUserResponse);
             }
-            return Ok(email);
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi server: {ex.Message}" });
+            }
         }
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] User user)

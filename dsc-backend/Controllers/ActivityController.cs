@@ -113,28 +113,35 @@ namespace dsc_backend.Controllers
         [HttpGet("getMyActivity")]
         public async Task<IActionResult> GetMyActivity([FromQuery] int userId)
         {
-            var activities = await _db.UserActivities
-                .Where(ua => ua.UserId == userId)
-                .Include(ua => ua.Activity)                // Bao gồm bảng Activity
-                    .ThenInclude(a => a.Level)             // Bao gồm bảng Level từ Activity
-                .Select(ua => new
-                {
-                    ua.Activity.ActivityId,               // Lấy ActivityId từ bảng Activity
-                    ua.Activity.ActivityName,             // Lấy tên của Activity
-                    ua.Activity.StartDate,                // Lấy StartDate từ Activity
-                    ua.Activity.Location,                 // Lấy Location từ Activity
-                    ua.Activity.NumberOfTeams,            // Lấy NumberOfTeams từ Activity
-                    LevelName = ua.Activity.Level.LevelName, // Lấy tên của Level từ Activity
-                    Avatar = ua.Activity.Avatar
-                })
-                .ToListAsync();
-
-            if (!activities.Any())
+            try
             {
-                return NotFound("Không tìm thấy hoạt động nào cho người dùng này.");
-            }
+                var activities = await _db.UserActivities
+                    .Where(ua => ua.UserId == userId && ua.RoleInActivity == "Admin") // Thêm điều kiện RoleInActivity
+                    .Include(ua => ua.Activity)
+                        .ThenInclude(a => a.Level)
+                    .Select(ua => new
+                    {
+                        ua.Activity.ActivityId,
+                        ua.Activity.ActivityName,
+                        ua.Activity.StartDate,
+                        ua.Activity.Location,
+                        ua.Activity.NumberOfTeams,
+                        LevelName = ua.Activity.Level.LevelName,
+                        Avatar = ua.Activity.Avatar
+                    })
+                    .ToListAsync();
 
-            return Ok(activities);
+                if (!activities.Any())
+                {
+                    return NotFound("Không tìm thấy hoạt động nào mà bạn là Admin.");
+                }
+
+                return Ok(activities);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         private async Task<ImageUploadResult> UploadToCloudinary(IFormFile file)
@@ -769,129 +776,123 @@ namespace dsc_backend.Controllers
             return Ok(activitys);
         }
         [HttpGet("getMemberActivity/{activityId}")]
-        public async Task<IActionResult> getMemberActivity(int activityId)
+        public async Task<IActionResult> GetMemberActivity(int activityId)
         {
-            // Lấy danh sách UserActivities theo ActivityId
-            var userActivities = await _db.UserActivities
-                .Where(ua => ua.ActivityId == activityId)
-                .Include(ua => ua.User) // Kết nối với bảng User
-                .Include(ua => ua.Activity) // Kết nối với bảng Activity
-                .ToListAsync();
-
-            if (!userActivities.Any())
+            try
             {
-                return NotFound("Không tìm thấy thông tin hoạt động hoặc thành viên.");
+                var userActivities = await _db.UserActivities
+                    .Where(ua => ua.ActivityId == activityId)
+                    .Include(ua => ua.User)
+                    .Include(ua => ua.Activity)
+                        .ThenInclude(a => a.Level) // Include thêm bảng Level
+                    .ToListAsync();
+
+                if (!userActivities.Any())
+                {
+                    return NotFound("Không tìm thấy thông tin hoạt động hoặc thành viên.");
+                }
+
+                var activity = userActivities.First().Activity;
+                if (activity == null)
+                {
+                    return NotFound("Không tìm thấy thông tin hoạt động.");
+                }
+
+                var activityInfo = new
+                {
+                    ActivityId = activity.ActivityId,
+                    ActivityName = activity.ActivityName,
+                    StartDate = activity.StartDate,
+                    Location = activity.Location,
+                    NumberOfTeams = activity.NumberOfTeams,
+                    Description = activity.Description,
+                    Expense = activity.Expense,
+                    LevelName = activity.Level?.LevelName,
+                    Avatar = activity.Avatar
+                };
+
+                var memberInfo = userActivities.Select(ua => new
+                {
+                    UserId = ua.UserId,
+                    AvatarUser = ua.User?.Avatar,
+                    FullName = ua.User?.FullName,
+                    RoleActivity = ua.RoleInActivity,
+                }).ToList();
+                var playerCount = userActivities.Count(ua => ua.RoleInActivity == "Player");
+                var result = new
+                {
+                    Activity = activityInfo,
+                    MemberInfo = memberInfo,
+                    playerCount = playerCount
+                };
+
+                return Ok(result);
             }
-
-            var firstActivity = userActivities.First().Activity;
-            if (firstActivity == null)
+            catch (Exception ex)
             {
-                return NotFound("Không tìm thấy thông tin hoạt động.");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
-
-            var activity = new
-            {
-                ActivityId = firstActivity.ActivityId,
-                ActivityName = firstActivity.ActivityName,
-                StartDate = firstActivity.StartDate,
-                Location = firstActivity.Location,
-                NumberOfTeams = firstActivity.NumberOfTeams,
-                Description = firstActivity.Description,
-                Expense = firstActivity.Expense,
-                LevelName = firstActivity.Level?.LevelName, // Kiểm tra null cho Level
-                Avatar = firstActivity.Avatar // Lấy Avatar của Activity
-            };
-
-            var userIds = userActivities.Select(ua => ua.UserId).ToList();
-            var memberInfo = await _db.UserSports
-                .Where(us => userIds.Contains(us.UserId))
-                .Include(us => us.Level) // Kết nối với Level
-                .Include(us => us.User)  // Kết nối với bảng User để lấy thông tin Avatar của User
-                .ToListAsync(); // Chuyển sang danh sách
-
-            // Tạo danh sách memberInfo với RoleActivity
-            var resultMemberInfo = memberInfo.Select(us => new
-            {
-                UserId = us.UserId,
-                AvatarUser = us.User.Avatar,  // Lấy Avatar của User
-                FullName = us.User.FullName,
-                RoleActivity = userActivities.FirstOrDefault(ua => ua.UserId == us.UserId)?.RoleInActivity,
-                LevelName = us.Level.LevelName
-            }).ToList();
-
-            var result = new
-            {
-                Activity = activity,
-                MemberInfo = resultMemberInfo
-            };
-
-            return Ok(result);
         }
         [HttpGet("getMemberActivityClub/{activityclubId}")]
-        public async Task<IActionResult> getMemberActivityClub(int activityclubId)
+        public async Task<IActionResult> GetMemberActivityClub(int activityclubId)
         {
-            // Lấy danh sách UserActivities theo ActivityId
-            var userActivities = await _db.UserActivityClubs
-                .Where(ua => ua.ActivityId == activityclubId)
-                .Include(ua => ua.User) // Kết nối với bảng User
-                .Include(ua => ua.Activity) // Kết nối với bảng Activity
-                .ToListAsync();
-
-            if (!userActivities.Any())
+            try
             {
-                return NotFound("Không tìm thấy thông tin hoạt động hoặc thành viên.");
+                var userActivities = await _db.UserActivityClubs
+                    .Where(ua => ua.ActivityId == activityclubId)
+                    .Include(ua => ua.User)
+                    .Include(ua => ua.Activity)
+                        .ThenInclude(a => a.Level) // Include thêm bảng Level
+                    .ToListAsync();
+
+                if (!userActivities.Any())
+                {
+                    return NotFound("Không tìm thấy thông tin hoạt động hoặc thành viên.");
+                }
+
+                var activity = userActivities.First().Activity;
+                if (activity == null)
+                {
+                    return NotFound("Không tìm thấy thông tin hoạt động.");
+                }
+
+                var activityInfo = new
+                {
+                    ActivityId = activity.ActivityClubId,
+                    ActivityName = activity.ActivityName,
+                    StartDate = activity.StartDate,
+                    Location = activity.Location,
+                    NumberOfTeams = activity.NumberOfTeams,
+                    Description = activity.Description,
+                    Expense = activity.Expense,
+                    LevelName = activity.Level?.LevelName,
+                    Avatar = activity.Avatar,
+                    ClubId = activity.ClubId
+                };
+
+                var memberInfo = userActivities.Select(ua => new
+                {
+                    UserId = ua.UserId,
+                    AvatarUser = ua.User?.Avatar,
+                    FullName = ua.User?.FullName,
+                    RoleActivity = ua.Role
+                }).ToList();
+
+                var playerCount = userActivities.Count(ua => ua.Role == "Player");
+
+                var result = new
+                {
+                    Activity = activityInfo,
+                    MemberInfo = memberInfo,
+                    PlayerCount = playerCount
+                };
+
+                return Ok(result);
             }
-
-            var firstActivity = userActivities.First().Activity;
-            if (firstActivity == null)
+            catch (Exception ex)
             {
-                return NotFound("Không tìm thấy thông tin hoạt động.");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
-
-            // Thông tin hoạt động
-            var activity = new
-            {
-                ActivityId = firstActivity.ActivityClubId,
-                ActivityName = firstActivity.ActivityName,
-                StartDate = firstActivity.StartDate,
-                Location = firstActivity.Location,
-                NumberOfTeams = firstActivity.NumberOfTeams,
-                Description = firstActivity.Description,
-                Expense = firstActivity.Expense,
-                LevelName = firstActivity.Level?.LevelName, // Kiểm tra null cho Level
-                Avatar = firstActivity.Avatar
-            };
-
-            // Danh sách UserId từ UserActivityClubs
-            var userIds = userActivities.Select(ua => ua.UserId).ToList();
-
-            // Lấy thông tin member từ UserSports
-            var memberInfo = await _db.UserSports
-                .Where(us => userIds.Contains(us.UserId))
-                .Include(us => us.Level) // Kết nối với Level
-                .ToListAsync();
-
-            // Tạo danh sách memberInfo với RoleActivity
-            var resultMemberInfo = memberInfo.Select(us => new
-            {
-                UserId = us.UserId,
-                AvatarUser = us.User.Avatar,
-                FullName = us.User.FullName,
-                RoleActivity = userActivities.FirstOrDefault(ua => ua.UserId == us.UserId)?.Role,
-                LevelName = us.Level?.LevelName
-            }).ToList();
-
-            // Đếm số lượng thành viên có Role == "Player"
-            int playerCount = userActivities.Count(ua => ua.Role == "Player");
-
-            var result = new
-            {
-                Activity = activity,
-                MemberInfo = resultMemberInfo,
-                PlayerCount = playerCount // Thêm số lượng thành viên có Role là "Player"
-            };
-
-            return Ok(result);
         }
         [HttpGet("getNameActivity")]
         public async Task<IActionResult> getNameActivity()
